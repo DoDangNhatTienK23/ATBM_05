@@ -1,25 +1,27 @@
 using System;
+using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
+using Oracle.ManagedDataAccess.Client;
 using OracleAdminApp.Helpers;
 
 namespace OracleAdminApp.Forms
 {
     public class UserEditDialog : Form
     {
-        private TextBox txtUsername, txtPassword, txtConfirmPwd, txtDefaultTS, txtTempTS;
-        private ComboBox cmbProfile, cmbStatus;
-        private CheckBox chkExpire;
-        private Button btnSave, btnCancel;
-        private Label lblStatus;
+        private TextBox   txtUsername, txtPassword, txtConfirmPwd, txtDefaultTS, txtTempTS;
+        private ComboBox  cmbProfile, cmbStatus;
+        private CheckBox  chkExpire;
+        private Button    btnSave, btnCancel;
+        private Label     lblStatus;
 
         private readonly string _connStr;
         private readonly string _existingUser;
-        private bool IsEdit { get { return _existingUser != null; } }
+        private bool IsEdit => _existingUser != null;
 
         public UserEditDialog(string connStr, string existingUser)
         {
-            _connStr = connStr;
+            _connStr      = connStr;
             _existingUser = existingUser;
             InitializeLayout();
             if (IsEdit) LoadUserData();
@@ -27,64 +29,56 @@ namespace OracleAdminApp.Forms
 
         private void InitializeLayout()
         {
-            this.Text = IsEdit ? "Chinh sua User: " + _existingUser : "Tao moi User";
-            this.Size = new Size(460, 490);
-            this.StartPosition = FormStartPosition.CenterParent;
+            this.Text            = IsEdit ? "Chinh sua User: " + _existingUser : "Tao moi User";
+            this.Size            = new Size(460, 490);
+            this.StartPosition   = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.BackColor = UIHelper.LightBg;
-            this.Font = new Font("Segoe UI", 9.5f);
+            this.MaximizeBox     = false;
+            this.MinimizeBox     = false;
+            this.BackColor       = UIHelper.LightBg;
+            this.Font            = new Font("Segoe UI", 9.5f);
 
             // Title bar
-            var pnlTitle = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 46,
-                BackColor = Color.FromArgb(30, 50, 80)
-            };
-            var lblTitleText = IsEdit
-                ? "Sua: " + _existingUser
-                : "+ Tao User moi";
+            var pnlTitle = new Panel { Dock = DockStyle.Top, Height = 46, BackColor = Color.FromArgb(30, 50, 80) };
             pnlTitle.Controls.Add(new Label
             {
-                Text = lblTitleText,
+                Text      = IsEdit ? "Sua: " + _existingUser : "+ Tao User moi",
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
-                AutoSize = true,
-                Location = new Point(15, 12)
+                Font      = new Font("Segoe UI", 12f, FontStyle.Bold),
+                AutoSize  = true,
+                Location  = new Point(15, 12)
             });
 
             // Content card
             var card = UIHelper.CreateCard(15, 55, 415, 355);
-
-            int y = 12;
+            int y    = 12;
 
             // Username
             UIHelper.CreateLabeledInput(card, "Ten dang nhap (USERNAME) *", 10, y, 385, out txtUsername);
             y += 52;
             if (IsEdit)
             {
-                txtUsername.Text = _existingUser;
-                txtUsername.Enabled = false;
+                txtUsername.Text      = _existingUser;
+                txtUsername.Enabled   = false;
                 txtUsername.BackColor = Color.FromArgb(235, 235, 240);
             }
 
             // Password
-            UIHelper.CreateLabeledInput(card, IsEdit ? "Mat khau moi (de trong = khong doi)" : "Mat khau *",
+            UIHelper.CreateLabeledInput(card,
+                IsEdit ? "Mat khau moi (de trong = khong doi)" : "Mat khau *",
                 10, y, 185, out txtPassword, true);
             UIHelper.CreateLabeledInput(card, "Xac nhan mat khau",
                 210, y, 185, out txtConfirmPwd, true);
             y += 52;
 
             // Tablespace
-            UIHelper.CreateLabeledInput(card, "Default Tablespace", 10, y, 185, out txtDefaultTS);
-            txtDefaultTS.Text = "USERS";
+            UIHelper.CreateLabeledInput(card, "Default Tablespace",   10,  y, 185, out txtDefaultTS);
+            txtDefaultTS.Text = "BENHVIEN_TBS";
             UIHelper.CreateLabeledInput(card, "Temporary Tablespace", 210, y, 185, out txtTempTS);
             txtTempTS.Text = "TEMP";
             y += 52;
 
-            // Profile
+            // Profile + Status (edit mode)
             UIHelper.CreateLabeledCombo(card, "Profile", 10, y, 185, out cmbProfile);
             cmbProfile.Items.AddRange(new object[] { "DEFAULT", "APP_PROFILE" });
             cmbProfile.SelectedIndex = 0;
@@ -100,10 +94,10 @@ namespace OracleAdminApp.Forms
             // Expire checkbox
             chkExpire = new CheckBox
             {
-                Text = "Yeu cau doi mat khau lan dau dang nhap (PASSWORD EXPIRE)",
+                Text     = "Yeu cau doi mat khau lan dau dang nhap (PASSWORD EXPIRE)",
                 Location = new Point(10, y),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 8.5f),
+                Font     = new Font("Segoe UI", 8.5f),
                 ForeColor = UIHelper.TextMuted
             };
             card.Controls.Add(chkExpire);
@@ -112,22 +106,22 @@ namespace OracleAdminApp.Forms
             lblStatus = new Label
             {
                 Location = new Point(15, 418),
-                Size = new Size(415, 20),
-                Font = new Font("Segoe UI", 8.5f),
+                Size     = new Size(415, 20),
+                Font     = new Font("Segoe UI", 8.5f),
                 ForeColor = UIHelper.TextMuted
             };
 
             // Buttons
-            btnCancel = UIHelper.CreateButton("Huy", ButtonStyle.Secondary);
-            btnCancel.Size = new Size(90, 34);
-            btnCancel.Location = new Point(245, 428);
+            btnCancel           = UIHelper.CreateButton("Huy", ButtonStyle.Secondary);
+            btnCancel.Size      = new Size(90, 34);
+            btnCancel.Location  = new Point(245, 428);
             btnCancel.ForeColor = UIHelper.TextDark;
-            btnCancel.Click += (s, e) => { this.DialogResult = DialogResult.Cancel; this.Close(); };
+            btnCancel.Click    += (s, e) => { this.DialogResult = DialogResult.Cancel; this.Close(); };
 
-            btnSave = UIHelper.CreateButton(IsEdit ? "Luu thay doi" : "+ Tao User", ButtonStyle.Primary);
-            btnSave.Size = new Size(130, 34);
+            btnSave          = UIHelper.CreateButton(IsEdit ? "Luu thay doi" : "+ Tao User", ButtonStyle.Primary);
+            btnSave.Size     = new Size(130, 34);
             btnSave.Location = new Point(310, 428);
-            btnSave.Click += BtnSave_Click;
+            btnSave.Click   += BtnSave_Click;
 
             this.Controls.Add(pnlTitle);
             this.Controls.Add(card);
@@ -139,58 +133,135 @@ namespace OracleAdminApp.Forms
             this.CancelButton = btnCancel;
         }
 
+        // ── Load thông tin user hiện tại khi ở chế độ Edit ───────────────
+        // Truy vấn DBA_USERS để điền sẵn các trường
         private void LoadUserData()
         {
-            // TODO: Query DBA_USERS WHERE USERNAME = :u
-            // SELECT DEFAULT_TABLESPACE, TEMPORARY_TABLESPACE, PROFILE, ACCOUNT_STATUS
+            try
+            {
+                const string sql = @"
+                    SELECT DEFAULT_TABLESPACE,
+                           TEMPORARY_TABLESPACE,
+                           PROFILE,
+                           ACCOUNT_STATUS
+                    FROM   DBA_USERS
+                    WHERE  USERNAME = :u";
+
+                using (var conn = new OracleConnection(_connStr))
+                {
+                    conn.Open();
+                    using (var cmd = new OracleCommand(sql, conn))
+                    {
+                        cmd.Parameters.Add("u", OracleDbType.Varchar2).Value = _existingUser;
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                txtDefaultTS.Text = reader["DEFAULT_TABLESPACE"].ToString();
+                                txtTempTS.Text    = reader["TEMPORARY_TABLESPACE"].ToString();
+
+                                // Chọn đúng Profile trong ComboBox (thêm nếu chưa có)
+                                string profile = reader["PROFILE"].ToString();
+                                if (!cmbProfile.Items.Contains(profile))
+                                    cmbProfile.Items.Add(profile);
+                                cmbProfile.SelectedItem = profile;
+
+                                // Chọn đúng Status (OPEN / LOCKED)
+                                if (cmbStatus != null)
+                                {
+                                    string st = reader["ACCOUNT_STATUS"].ToString();
+                                    cmbStatus.SelectedItem = st.Contains("LOCK") ? "LOCKED" : "OPEN";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowStatus("Khong the tai thong tin user: " + ex.Message, StatusType.Error);
+            }
         }
 
+        // ── Xử lý nút Lưu ────────────────────────────────────────────────
         private void BtnSave_Click(object sender, EventArgs e)
         {
+            // --- Validate ---
             if (!IsEdit && string.IsNullOrWhiteSpace(txtUsername.Text))
-            {
-                ShowStatus("Vui long nhap ten dang nhap!", StatusType.Error); return;
-            }
+            { ShowStatus("Vui long nhap ten dang nhap!", StatusType.Error); return; }
+
             if (!IsEdit && string.IsNullOrWhiteSpace(txtPassword.Text))
-            {
-                ShowStatus("Vui long nhap mat khau!", StatusType.Error); return;
-            }
+            { ShowStatus("Vui long nhap mat khau!", StatusType.Error); return; }
+
             if (!string.IsNullOrEmpty(txtPassword.Text) && txtPassword.Text != txtConfirmPwd.Text)
-            {
-                ShowStatus("Mat khau xac nhan khong khop!", StatusType.Error); return;
-            }
+            { ShowStatus("Mat khau xac nhan khong khop!", StatusType.Error); return; }
 
             try
             {
-                if (!IsEdit)
+                using (var conn = new OracleConnection(_connStr))
                 {
-                    // CREATE USER
-                    string sql = "CREATE USER " + txtUsername.Text.Trim() +
-                                 " IDENTIFIED BY \"" + txtPassword.Text + "\"" +
-                                 " DEFAULT TABLESPACE " + txtDefaultTS.Text.Trim() +
-                                 " TEMPORARY TABLESPACE " + txtTempTS.Text.Trim() +
-                                 " PROFILE " + cmbProfile.Text;
-                    if (chkExpire.Checked) sql += " PASSWORD EXPIRE";
-                    // TODO: Execute sql
-                    // Also: GRANT CREATE SESSION TO {username}
-                }
-                else
-                {
-                    // ALTER USER
-                    if (!string.IsNullOrEmpty(txtPassword.Text))
+                    conn.Open();
+
+                    if (!IsEdit)
                     {
-                        // TODO: ALTER USER {_existingUser} IDENTIFIED BY "{password}"
+                        // ── TẠO USER MỚI: gọi SP_CREATE_USER ─────────────
+                        // SP_CREATE_USER(p_username, p_password, p_tablespace)
+                        // SP tự GRANT CREATE SESSION sau khi tạo
+                        using (var cmd = new OracleCommand("SP_CREATE_USER", conn))
+                        {
+                            cmd.CommandType = CommandType.StoredProcedure;
+                            cmd.Parameters.Add("p_username",   OracleDbType.Varchar2).Value = txtUsername.Text.Trim().ToUpper();
+                            cmd.Parameters.Add("p_password",   OracleDbType.Varchar2).Value = txtPassword.Text;
+                            cmd.Parameters.Add("p_tablespace", OracleDbType.Varchar2).Value = txtDefaultTS.Text.Trim();
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // PASSWORD EXPIRE nếu được chọn
+                        if (chkExpire.Checked)
+                        {
+                            using (var cmd = new OracleCommand(
+                                "ALTER USER " + txtUsername.Text.Trim().ToUpper() + " PASSWORD EXPIRE", conn))
+                            {
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
                     }
-                    if (cmbStatus != null)
+                    else
                     {
-                        string lockSql = cmbStatus.Text == "LOCKED"
-                            ? "ALTER USER " + _existingUser + " ACCOUNT LOCK"
-                            : "ALTER USER " + _existingUser + " ACCOUNT UNLOCK";
-                        // TODO: Execute lockSql
-                    }
-                    if (chkExpire.Checked)
-                    {
-                        // TODO: ALTER USER {_existingUser} PASSWORD EXPIRE
+                        // ── SỬA USER: gọi SP_ALTER_USER_PASSWORD nếu có mật khẩu mới ──
+                        if (!string.IsNullOrEmpty(txtPassword.Text))
+                        {
+                            using (var cmd = new OracleCommand("SP_ALTER_USER_PASSWORD", conn))
+                            {
+                                cmd.CommandType = CommandType.StoredProcedure;
+                                cmd.Parameters.Add("p_username",    OracleDbType.Varchar2).Value = _existingUser;
+                                cmd.Parameters.Add("p_newpassword", OracleDbType.Varchar2).Value = txtPassword.Text;
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+
+                        // Khóa / Mở khóa nếu Status thay đổi
+                        if (cmbStatus != null)
+                        {
+                            string action = cmbStatus.Text == "LOCKED" ? "LOCK" : "UNLOCK";
+                            using (var cmd = new OracleCommand("SP_LOCK_UNLOCK_USER", conn))
+                            {
+                                cmd.CommandType = CommandType.StoredProcedure;
+                                cmd.Parameters.Add("p_username", OracleDbType.Varchar2).Value = _existingUser;
+                                cmd.Parameters.Add("p_action",   OracleDbType.Varchar2).Value = action;
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+
+                        // PASSWORD EXPIRE nếu được chọn
+                        if (chkExpire.Checked)
+                        {
+                            using (var cmd = new OracleCommand(
+                                "ALTER USER " + _existingUser + " PASSWORD EXPIRE", conn))
+                            {
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
                     }
                 }
 
