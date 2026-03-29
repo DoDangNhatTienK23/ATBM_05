@@ -14,7 +14,6 @@
 -- THỰC THI: Chạy theo thứ tự từ trên xuống.
 -- ============================================================
 
-
 -- ============================================================
 -- SECTION 0: BOOTSTRAP
 -- Đăng nhập: SYS AS SYSDBA, Service name = XEPDB1
@@ -49,6 +48,7 @@ GRANT CREATE USER             TO BVDBA;
 GRANT ALTER USER              TO BVDBA;
 GRANT DROP USER               TO BVDBA;
 GRANT CREATE ROLE             TO BVDBA;
+GRANT CREATE VIEW             TO BVDBA;
 GRANT DROP ANY ROLE           TO BVDBA;
 GRANT GRANT ANY ROLE          TO BVDBA;
 GRANT GRANT ANY PRIVILEGE     TO BVDBA;
@@ -500,6 +500,7 @@ END FN_LIST_COLUMNS;
 --       INSERT/DELETE không theo cột
 -- -------------------------------------------------------
 
+-- 3a
 -- Cấp quyền hệ thống (system privilege) cho user/role
 -- p_with_admin_opt: 'YES' = WITH ADMIN OPTION | 'NO' = không
 CREATE OR REPLACE PROCEDURE SP_GRANT_SYS_PRIV (
@@ -533,38 +534,51 @@ CREATE OR REPLACE PROCEDURE SP_GRANT_OBJ_PRIV (
     p_columns        IN VARCHAR2 DEFAULT NULL,
     p_with_grant_opt IN VARCHAR2 DEFAULT 'NO'
 ) AS
-    v_sql    VARCHAR2(2000);
-    v_object VARCHAR2(300);
-    v_priv   VARCHAR2(20);
+    v_sql          VARCHAR2(2000);
+    v_object       VARCHAR2(300);
+    v_priv         VARCHAR2(20);
+    v_view_name    VARCHAR2(128);
 BEGIN
     v_priv   := UPPER(TRIM(p_privilege));
     v_object := DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_owner) || '.' ||
                 DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_name);
 
-    -- Validate: INSERT và DELETE không được cấp theo cột
+    -- Chặn INSERT, DELETE phân quyền theo mức cột
     IF p_columns IS NOT NULL AND v_priv IN ('INSERT','DELETE','EXECUTE') THEN
-        RAISE_APPLICATION_ERROR(-20002,
-            v_priv || ' không hỗ trợ phân quyền theo cột');
+        RAISE_APPLICATION_ERROR(-20002, 'Quyen ' || v_priv || ' khong ho tro phan quyen theo cot!');
     END IF;
 
-    -- Xây dựng câu lệnh GRANT
-    IF p_columns IS NOT NULL AND v_priv IN ('SELECT','UPDATE') THEN
-        -- Cấp theo cột cụ thể (p_columns đã được validate whitelist ở tầng C#)
-        v_sql := 'GRANT ' || v_priv ||
-                 ' (' || p_columns || ')' ||
-                 ' ON ' || v_object ||
+    -- Xử lý quyền UPDATE trên mức cột 
+    IF p_columns IS NOT NULL AND v_priv = 'UPDATE' THEN
+        v_sql := 'GRANT UPDATE (' || p_columns || ') ON ' || v_object ||
                  ' TO ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
+
+    -- Xử lý quyền SELECT trên mức cột (TẠO VIEW TRUNG GIAN)
+    ELSIF p_columns IS NOT NULL AND v_priv = 'SELECT' THEN
+        -- Khởi tạo tên View tự động, ví dụ: V_NHANVIEN_U_BACSI01
+        v_view_name := 'V_' || SUBSTR(p_object_name, 1, 15) || '_' || SUBSTR(p_grantee, 1, 10);
+
+        -- Lệnh DDL tạo View chỉ chứa các cột được chọn
+        v_sql := 'CREATE OR REPLACE VIEW ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_owner) || '.' || v_view_name ||
+                 ' AS SELECT ' || p_columns || ' FROM ' || v_object;
+        EXECUTE IMMEDIATE v_sql;
+
+        -- Đổi lệnh GRANT sang cấp quyền SELECT trên View vừa tạo thay vì bảng gốc
+        v_sql := 'GRANT SELECT ON ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_owner) || '.' || v_view_name ||
+                 ' TO ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
+
+    -- Xử lý cấp quyền trên toàn đối tượng (Khi người dùng không chọn cột)
     ELSE
-        -- Cấp trên toàn đối tượng
-        v_sql := 'GRANT ' || v_priv ||
-                 ' ON ' || v_object ||
+        v_sql := 'GRANT ' || v_priv || ' ON ' || v_object ||
                  ' TO ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
     END IF;
 
+    -- Xử lý tùy chọn WITH GRANT OPTION
     IF UPPER(p_with_grant_opt) = 'YES' THEN
         v_sql := v_sql || ' WITH GRANT OPTION';
     END IF;
 
+    -- Thực thi câu lệnh GRANT cuối cùng
     EXECUTE IMMEDIATE v_sql;
 END SP_GRANT_OBJ_PRIV;
 /
@@ -587,6 +601,21 @@ BEGIN
 END SP_GRANT_ROLE;
 /
 
+-- Test
+-- Tạo user U_TEST_SQL, pass 123456, tablespace mặc định là BENHVIEN_TBS
+EXEC SP_CREATE_USER('U_TEST_SQL', '123456');
+
+-- Kiểm tra xem user đã vào hệ thống chưa (Dùng hàm bạn đã viết)
+SELECT * FROM TABLE(FN_LIST_USERS) WHERE USERNAME = 'U_TEST_SQL';
+
+-- Tham số: (Quyền, Owner, Tên_Bảng, Người_Nhận, Danh_Sách_Cột, Grant_Option)
+EXEC SP_GRANT_OBJ_PRIV('SELECT', 'BVDBA', 'BENHNHAN', 'U_TEST_SQL', NULL, 'NO');
+
+-- Kiểm tra quyền vừa cấp
+SELECT * FROM DBA_TAB_PRIVS WHERE GRANTEE = 'U_TEST_SQL' AND TABLE_NAME = 'BENHNHAN';
+
+-- Truyền danh sách cột 'HOTEN, SODT' vào tham số p_columns
+EXEC SP_GRANT_OBJ_PRIV('SELECT', 'BVDBA', 'NHANVIEN', 'U_TEST_SQL', 'HOTEN, SODT', 'NO');
 
 -- -------------------------------------------------------
 -- YÊU CẦU 4: Thu hồi quyền từ user hoặc role
