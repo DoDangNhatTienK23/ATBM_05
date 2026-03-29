@@ -13,19 +13,27 @@ namespace OracleAdminApp.Forms
         private TabControl tabGrantType;
         private TabPage tabObjectPriv, tabRoleToUser;
 
-        // Tab 1
+        // Tab 1 - Object privilege
         private ComboBox cmbGranteeType, cmbGrantee, cmbObjectType, cmbObjectOwner, cmbObjectName;
         private CheckedListBox clbPrivileges, clbColumns;
         private CheckBox chkGrantOption, chkAllColumns;
         private Button btnGrant;
         private Label lblStatus1;
         private Panel pnlColumnArea;
+        private DataGridView dgvObjectPrivileges;
+        private DataGridView dgvGrantOptionOnly;
 
-        // Tab 2
+        // Giữ reference để layout động
+        private Panel cardGridAllObject;
+        private Panel cardGridGrantOptionObject;
+
+        // Tab 2 - Role to user
         private ComboBox cmbRoleToAssign, cmbRoleGrantee;
         private CheckBox chkAdminOption;
         private Button btnGrantRole;
         private Label lblStatus2;
+        private DataGridView dgvRolePrivileges;
+        private DataGridView dgvAdminOptionOnly;
 
         private readonly string _connStr;
 
@@ -33,27 +41,23 @@ namespace OracleAdminApp.Forms
         {
             _connStr = connStr;
             InitializeLayout();
-            PopulateData();
+            LoadInitialData();
         }
-
-        // ============================================================
-        // KHỞI TẠO GIAO DIỆN
-        // ============================================================
 
         private void InitializeLayout()
         {
-            this.Dock = DockStyle.Fill;
-            this.BackColor = UIHelper.LightBg;
+            Dock = DockStyle.Fill;
+            BackColor = UIHelper.LightBg;
 
             var header = UIHelper.CreateSectionHeader(
                 "Cap quyen",
                 "Cap quyen tren doi tuong cho user/role, hoac cap role cho user");
-            header.Dock = DockStyle.Top;
 
             tabGrantType = new TabControl
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI", 9.5f)
+                Font = new Font("Segoe UI", 9.5f),
+                Location = new Point(0, header.Bottom + 5)
             };
 
             tabObjectPriv = new TabPage("  Quyen tren doi tuong  ");
@@ -65,30 +69,46 @@ namespace OracleAdminApp.Forms
             tabGrantType.TabPages.Add(tabObjectPriv);
             tabGrantType.TabPages.Add(tabRoleToUser);
 
-            // ĐÚNG THỨ TỰ trong WinForms: control Dock=Fill add TRƯỚC, Dock=Top add SAU
-            // Layout engine xử lý từ cuối list lên đầu:
-            // → header (Top) được xử lý sau cùng, ghim trên cùng
-            // → tabGrantType (Fill) fill toàn bộ phần còn lại bên dưới
-            this.Controls.Add(tabGrantType);
-            this.Controls.Add(header);
+            Controls.Add(tabGrantType);
+            Controls.Add(header);
         }
 
         private void BuildObjectPrivTab()
         {
             tabObjectPriv.BackColor = UIHelper.LightBg;
 
-            var cardGrantee = UIHelper.CreateCard(10, 10, 560, 100, "NGUOI NHAN QUYEN");
-            tabObjectPriv.Controls.Add(cardGrantee);
+            var scrollPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = UIHelper.LightBg
+            };
+            scrollPanel.AutoScrollMinSize = new Size(1260, 900);
+            tabObjectPriv.Controls.Add(scrollPanel);
+
+            var cardGrantee = UIHelper.CreateCard(10, 10, 700, 100, "NGUOI NHAN QUYEN");
+            scrollPanel.Controls.Add(cardGrantee);
 
             UIHelper.CreateLabeledCombo(cardGrantee, "Loai", 10, 32, 130, out cmbGranteeType);
             cmbGranteeType.Items.AddRange(new object[] { "User", "Role" });
             cmbGranteeType.SelectedIndex = 0;
-            cmbGranteeType.SelectedIndexChanged += (s, e) => LoadGrantees();
+            cmbGranteeType.SelectedIndexChanged += (s, e) =>
+            {
+                LoadGrantees();
+                UpdateGrantOptionState();
+                LoadObjectPrivilegeGrid();
+                LoadGrantOptionGrid();
+            };
 
-            UIHelper.CreateLabeledCombo(cardGrantee, "Ten User / Role", 160, 32, 370, out cmbGrantee);
+            UIHelper.CreateLabeledCombo(cardGrantee, "Ten User / Role", 160, 32, 500, out cmbGrantee);
+            cmbGrantee.SelectedIndexChanged += (s, e) =>
+            {
+                LoadObjectPrivilegeGrid();
+                LoadGrantOptionGrid();
+            };
 
-            var cardObject = UIHelper.CreateCard(10, 120, 560, 100, "DOI TUONG CAP QUYEN");
-            tabObjectPriv.Controls.Add(cardObject);
+            var cardObject = UIHelper.CreateCard(10, 120, 700, 100, "DOI TUONG CAP QUYEN");
+            scrollPanel.Controls.Add(cardObject);
 
             UIHelper.CreateLabeledCombo(cardObject, "Loai doi tuong", 10, 32, 120, out cmbObjectType);
             cmbObjectType.Items.AddRange(new object[] { "TABLE", "VIEW", "PROCEDURE", "FUNCTION" });
@@ -97,22 +117,27 @@ namespace OracleAdminApp.Forms
             {
                 RefreshPrivilegeList();
                 LoadObjects();
+                LoadColumns();
+                UpdateObjectPrivLayout();
             };
 
-            // Owner cố định là BVDBA (schema duy nhất trong hệ thống)
             UIHelper.CreateLabeledCombo(cardObject, "Schema / Owner", 150, 32, 150, out cmbObjectOwner);
-            cmbObjectOwner.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbObjectOwner.SelectedIndexChanged += (s, e) =>
+            {
+                LoadObjects();
+                LoadColumns();
+            };
 
-            UIHelper.CreateLabeledCombo(cardObject, "Ten doi tuong", 320, 32, 220, out cmbObjectName);
+            UIHelper.CreateLabeledCombo(cardObject, "Ten doi tuong", 320, 32, 340, out cmbObjectName);
             cmbObjectName.SelectedIndexChanged += (s, e) => LoadColumns();
 
-            var cardPriv = UIHelper.CreateCard(10, 230, 270, 220, "CHON QUYEN");
-            tabObjectPriv.Controls.Add(cardPriv);
+            var cardPriv = UIHelper.CreateCard(10, 230, 270, 190, "CHON QUYEN");
+            scrollPanel.Controls.Add(cardPriv);
 
             clbPrivileges = new CheckedListBox
             {
                 Location = new Point(10, 35),
-                Size = new Size(245, 160),
+                Size = new Size(245, 130),
                 Font = new Font("Segoe UI", 9.5f),
                 CheckOnClick = true,
                 BorderStyle = BorderStyle.None,
@@ -121,8 +146,9 @@ namespace OracleAdminApp.Forms
             clbPrivileges.ItemCheck += ClbPrivileges_ItemCheck;
             cardPriv.Controls.Add(clbPrivileges);
 
-            pnlColumnArea = UIHelper.CreateCard(290, 230, 280, 220, "PHAN QUYEN DEN COT");
-            tabObjectPriv.Controls.Add(pnlColumnArea);
+            pnlColumnArea = UIHelper.CreateCard(290, 230, 420, 190, "PHAN QUYEN DEN COT");
+            pnlColumnArea.Visible = false;
+            scrollPanel.Controls.Add(pnlColumnArea);
 
             chkAllColumns = new CheckBox
             {
@@ -130,7 +156,8 @@ namespace OracleAdminApp.Forms
                 Location = new Point(10, 35),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9f),
-                ForeColor = UIHelper.TextMuted
+                ForeColor = UIHelper.TextMuted,
+                Checked = true
             };
             chkAllColumns.CheckedChanged += (s, e) => clbColumns.Enabled = !chkAllColumns.Checked;
             pnlColumnArea.Controls.Add(chkAllColumns);
@@ -138,50 +165,80 @@ namespace OracleAdminApp.Forms
             clbColumns = new CheckedListBox
             {
                 Location = new Point(10, 60),
-                Size = new Size(255, 130),
+                Size = new Size(390, 100),
                 Font = new Font("Segoe UI", 9f),
                 CheckOnClick = true,
                 BorderStyle = BorderStyle.None,
-                BackColor = UIHelper.LightBg
+                BackColor = UIHelper.LightBg,
+                Enabled = false
             };
             pnlColumnArea.Controls.Add(clbColumns);
 
             chkGrantOption = new CheckBox
             {
                 Text = "WITH GRANT OPTION (nguoi duoc cap co the cap lai cho nguoi khac)",
-                Location = new Point(10, 460),
+                Location = new Point(10, 430),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9f),
                 ForeColor = UIHelper.TextMuted
             };
-            tabObjectPriv.Controls.Add(chkGrantOption);
+            scrollPanel.Controls.Add(chkGrantOption);
 
             btnGrant = UIHelper.CreateButton("THUC HIEN CAP QUYEN", ButtonStyle.Success);
             btnGrant.Size = new Size(210, 38);
-            btnGrant.Location = new Point(360, 490);
+            btnGrant.Location = new Point(500, 425);
             btnGrant.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
             btnGrant.Click += BtnGrant_Click;
-            tabObjectPriv.Controls.Add(btnGrant);
+            scrollPanel.Controls.Add(btnGrant);
 
             lblStatus1 = new Label
             {
-                Location = new Point(10, 500),
-                Size = new Size(340, 20),
+                Location = new Point(10, 470),
+                Size = new Size(680, 35),
                 Font = new Font("Segoe UI", 8.5f),
                 ForeColor = UIHelper.TextMuted
             };
-            tabObjectPriv.Controls.Add(lblStatus1);
+            scrollPanel.Controls.Add(lblStatus1);
+
+            cardGridAllObject = UIHelper.CreateCard(10, 510, 700, 190, "QUYEN OBJECT HIEN TAI");
+            scrollPanel.Controls.Add(cardGridAllObject);
+
+            dgvObjectPrivileges = CreateGrid(new Size(680, 150), new Point(10, 30));
+            cardGridAllObject.Controls.Add(dgvObjectPrivileges);
+
+            cardGridGrantOptionObject = UIHelper.CreateCard(720, 510, 520, 190, "CAC DONG CO WITH GRANT OPTION");
+            scrollPanel.Controls.Add(cardGridGrantOptionObject);
+
+            dgvGrantOptionOnly = CreateGrid(new Size(500, 150), new Point(10, 30));
+            cardGridGrantOptionObject.Controls.Add(dgvGrantOptionOnly);
+
+            UpdateObjectPrivLayout();
         }
 
         private void BuildRoleToUserTab()
         {
             tabRoleToUser.BackColor = UIHelper.LightBg;
 
-            var card = UIHelper.CreateCard(10, 10, 560, 200, "CAP ROLE CHO USER");
-            tabRoleToUser.Controls.Add(card);
+            var scrollPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = UIHelper.LightBg
+            };
+            scrollPanel.AutoScrollMinSize = new Size(1260, 560);
+            tabRoleToUser.Controls.Add(scrollPanel);
 
-            UIHelper.CreateLabeledCombo(card, "Role can cap", 10, 32, 250, out cmbRoleToAssign);
-            UIHelper.CreateLabeledCombo(card, "Cap cho User", 280, 32, 260, out cmbRoleGrantee);
+            var card = UIHelper.CreateCard(10, 10, 700, 200, "CAP ROLE CHO USER");
+            scrollPanel.Controls.Add(card);
+
+            UIHelper.CreateLabeledCombo(card, "Role can cap", 10, 32, 300, out cmbRoleToAssign);
+            UIHelper.CreateLabeledCombo(card, "Cap cho User", 330, 32, 330, out cmbRoleGrantee);
+
+            cmbRoleGrantee.SelectedIndexChanged += (s, e) =>
+            {
+                LoadRolePrivilegeGrid();
+                LoadAdminOptionGrid();
+            };
 
             chkAdminOption = new CheckBox
             {
@@ -196,7 +253,7 @@ namespace OracleAdminApp.Forms
             var infoPanel = new Panel
             {
                 Location = new Point(10, 120),
-                Size = new Size(530, 50),
+                Size = new Size(650, 50),
                 BackColor = Color.FromArgb(230, 240, 255),
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -213,215 +270,355 @@ namespace OracleAdminApp.Forms
 
             btnGrantRole = UIHelper.CreateButton("CAP ROLE", ButtonStyle.Success);
             btnGrantRole.Size = new Size(130, 38);
-            btnGrantRole.Location = new Point(440, 225);
+            btnGrantRole.Location = new Point(580, 220);
             btnGrantRole.Click += BtnGrantRole_Click;
-            tabRoleToUser.Controls.Add(btnGrantRole);
+            scrollPanel.Controls.Add(btnGrantRole);
 
             lblStatus2 = new Label
             {
-                Location = new Point(10, 235),
-                Size = new Size(420, 20),
+                Location = new Point(10, 225),
+                Size = new Size(560, 35),
                 Font = new Font("Segoe UI", 8.5f),
                 ForeColor = UIHelper.TextMuted
             };
-            tabRoleToUser.Controls.Add(lblStatus2);
+            scrollPanel.Controls.Add(lblStatus2);
+
+            var cardGridAll = UIHelper.CreateCard(10, 275, 700, 220, "ROLE HIEN TAI CUA USER");
+            scrollPanel.Controls.Add(cardGridAll);
+
+            dgvRolePrivileges = CreateGrid(new Size(680, 180), new Point(10, 30));
+            cardGridAll.Controls.Add(dgvRolePrivileges);
+
+            var cardGridAdminOnly = UIHelper.CreateCard(720, 275, 520, 220, "CAC DONG CO WITH ADMIN OPTION");
+            scrollPanel.Controls.Add(cardGridAdminOnly);
+
+            dgvAdminOptionOnly = CreateGrid(new Size(500, 180), new Point(10, 30));
+            cardGridAdminOnly.Controls.Add(dgvAdminOptionOnly);
         }
 
-        // ============================================================
-        // LOAD DỮ LIỆU TỪ ORACLE
-        // ============================================================
-
-        /// <summary>
-        /// Gọi khi form load lần đầu: điền tất cả combo cần thiết.
-        /// </summary>
-        private void PopulateData()
+        private void UpdateObjectPrivLayout()
         {
-            // Owner cố định là BVDBA — chỉ schema của hệ thống
-            cmbObjectOwner.Items.Add("BVDBA");
-            cmbObjectOwner.SelectedIndex = 0;
+            int nextTop;
 
-            // Điền các combo phụ thuộc DB
-            LoadGrantees();          // Tab 1: danh sách user/role nhận quyền
-            LoadObjects();           // Tab 1: danh sách objects
-            RefreshPrivilegeList();  // Tab 1: các quyền tương ứng loại object
+            if (pnlColumnArea.Visible)
+            {
+                nextTop = pnlColumnArea.Bottom + 10;
+            }
+            else
+            {
+                nextTop = 230 + 190 + 10; // cardPriv.Bottom + spacing
+            }
 
-            LoadRoles();             // Tab 2: danh sách role để cấp
-            LoadUsers();             // Tab 2: danh sách user nhận role
+            chkGrantOption.Location = new Point(10, nextTop);
+            btnGrant.Location = new Point(500, nextTop - 5);
+            lblStatus1.Location = new Point(10, nextTop + 40);
+
+            cardGridAllObject.Location = new Point(10, nextTop + 80);
+            cardGridGrantOptionObject.Location = new Point(720, nextTop + 80);
         }
 
-        /// <summary>
-        /// Load danh sách User hoặc Role vào cmbGrantee (Tab 1).
-        /// Gọi: SELECT * FROM TABLE(FN_LIST_USERS) hoặc FN_LIST_ROLES
-        /// </summary>
-        private void LoadGrantees()
+        private DataGridView CreateGrid(Size size, Point location)
         {
-            cmbGrantee.Items.Clear();
-            bool isUser = cmbGranteeType.SelectedItem?.ToString() == "User";
+            return new DataGridView
+            {
+                Location = location,
+                Size = size,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                RowHeadersVisible = false
+            };
+        }
 
-            string sql = isUser
-                ? "SELECT USERNAME      AS NAME FROM TABLE(BVDBA.FN_LIST_USERS) ORDER BY NAME"
-                : "SELECT ROLE          AS NAME FROM TABLE(BVDBA.FN_LIST_ROLES) ORDER BY NAME";
+        private void LoadInitialData()
+        {
+            LoadGrantees();
+            UpdateGrantOptionState();
+            LoadObjectOwners();
+            LoadRolesForRoleTab();
+            LoadUsersForRoleTab();
+            RefreshPrivilegeList();
+
+            LoadObjectPrivilegeGrid();
+            LoadGrantOptionGrid();
+
+            LoadRolePrivilegeGrid();
+            LoadAdminOptionGrid();
+        }
+
+        private void ExecuteReaderToCombo(ComboBox combo, string query, OracleParameter[] parameters = null)
+        {
+            combo.Items.Clear();
 
             try
             {
                 using (var conn = new OracleConnection(_connStr))
                 {
                     conn.Open();
-                    using (var cmd = new OracleCommand(sql, conn))
-                    using (var reader = cmd.ExecuteReader())
+                    using (var cmd = new OracleCommand(query, conn))
                     {
-                        while (reader.Read())
-                            cmbGrantee.Items.Add(reader.GetString(0));
-                    }
-                }
-                if (cmbGrantee.Items.Count > 0)
-                    cmbGrantee.SelectedIndex = 0;
-            }
-            catch (Exception ex)
-            {
-                UIHelper.SetStatus(lblStatus1, "Loi tai danh sach grantee: " + ex.Message, StatusType.Error);
-            }
-        }
+                        cmd.BindByName = true;
+                        if (parameters != null)
+                            cmd.Parameters.AddRange(parameters);
 
-        /// <summary>
-        /// Load danh sách objects theo loại đang chọn vào cmbObjectName (Tab 1).
-        /// Gọi: SELECT * FROM TABLE(FN_LIST_OBJECTS) WHERE OBJECT_TYPE = :t
-        /// </summary>
-        private void LoadObjects()
-        {
-            cmbObjectName.Items.Clear();
-            string objType = cmbObjectType.SelectedItem?.ToString() ?? "TABLE";
-
-            const string sql =
-                "SELECT OBJECT_NAME FROM TABLE(BVDBA.FN_LIST_OBJECTS) " +
-                "WHERE OBJECT_TYPE = :objType ORDER BY OBJECT_NAME";
-
-            try
-            {
-                using (var conn = new OracleConnection(_connStr))
-                {
-                    conn.Open();
-                    using (var cmd = new OracleCommand(sql, conn))
-                    {
-                        cmd.Parameters.Add("objType", OracleDbType.Varchar2).Value = objType;
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
-                                cmbObjectName.Items.Add(reader.GetString(0));
+                                combo.Items.Add(reader[0].ToString());
                         }
                     }
                 }
-                if (cmbObjectName.Items.Count > 0)
-                    cmbObjectName.SelectedIndex = 0;
             }
-            catch (Exception ex)
+            catch
             {
-                UIHelper.SetStatus(lblStatus1, "Loi tai danh sach doi tuong: " + ex.Message, StatusType.Error);
+                if (query.Contains("DBA_"))
+                    ExecuteReaderToComboFallback(combo, query.Replace("DBA_", "ALL_"), parameters);
             }
+
+            if (combo.Items.Count > 0)
+                combo.SelectedIndex = 0;
         }
 
-        /// <summary>
-        /// Load danh sách cột của bảng/view đang chọn vào clbColumns (Tab 1).
-        /// Gọi: SELECT * FROM TABLE(FN_LIST_COLUMNS(:objectName))
-        /// Chỉ áp dụng cho TABLE và VIEW.
-        /// </summary>
+        private void ExecuteReaderToComboFallback(ComboBox combo, string fallbackQuery, OracleParameter[] parameters)
+        {
+            try
+            {
+                OracleParameter[] clonedParameters = null;
+                if (parameters != null)
+                {
+                    clonedParameters = new OracleParameter[parameters.Length];
+                    for (int i = 0; i < parameters.Length; i++)
+                        clonedParameters[i] = new OracleParameter(parameters[i].ParameterName, parameters[i].Value);
+                }
+
+                using (var conn = new OracleConnection(_connStr))
+                {
+                    conn.Open();
+                    using (var cmd = new OracleCommand(fallbackQuery, conn))
+                    {
+                        cmd.BindByName = true;
+                        if (clonedParameters != null)
+                            cmd.Parameters.AddRange(clonedParameters);
+
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                                combo.Items.Add(reader[0].ToString());
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            if (combo.Items.Count > 0)
+                combo.SelectedIndex = 0;
+        }
+
+        private DataTable ExecuteToDataTable(string query, OracleParameter[] parameters = null, bool allowFallback = true)
+        {
+            var dt = new DataTable();
+
+            try
+            {
+                using (var conn = new OracleConnection(_connStr))
+                {
+                    conn.Open();
+                    using (var cmd = new OracleCommand(query, conn))
+                    {
+                        cmd.BindByName = true;
+                        if (parameters != null)
+                            cmd.Parameters.AddRange(parameters);
+
+                        using (var da = new OracleDataAdapter(cmd))
+                        {
+                            da.Fill(dt);
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                if (allowFallback && query.Contains("DBA_"))
+                {
+                    string fallbackQuery = query.Replace("DBA_", "ALL_");
+                    try
+                    {
+                        using (var conn = new OracleConnection(_connStr))
+                        {
+                            conn.Open();
+                            using (var cmd = new OracleCommand(fallbackQuery, conn))
+                            {
+                                cmd.BindByName = true;
+                                if (parameters != null)
+                                {
+                                    var cloned = new OracleParameter[parameters.Length];
+                                    for (int i = 0; i < parameters.Length; i++)
+                                        cloned[i] = new OracleParameter(parameters[i].ParameterName, parameters[i].Value);
+
+                                    cmd.Parameters.AddRange(cloned);
+                                }
+
+                                using (var da = new OracleDataAdapter(cmd))
+                                {
+                                    da.Fill(dt);
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+
+            return dt;
+        }
+
+        private void LoadGrantees()
+        {
+            string granteeType = cmbGranteeType.SelectedItem?.ToString();
+
+            if (granteeType == "User")
+            {
+                string query = "SELECT USERNAME FROM DBA_USERS WHERE USERNAME NOT IN ('SYS', 'SYSTEM') ORDER BY USERNAME";
+                ExecuteReaderToCombo(cmbGrantee, query);
+            }
+            else
+            {
+                string query = "SELECT ROLE FROM DBA_ROLES ORDER BY ROLE";
+                ExecuteReaderToCombo(cmbGrantee, query);
+            }
+
+            UIHelper.SetStatus(lblStatus1, "Da tai danh sach " + granteeType, StatusType.Success);
+        }
+
+        private void LoadObjectOwners()
+        {
+            string query = "SELECT DISTINCT OWNER FROM DBA_OBJECTS WHERE OBJECT_TYPE IN ('TABLE','VIEW','PROCEDURE','FUNCTION') ORDER BY OWNER";
+            ExecuteReaderToCombo(cmbObjectOwner, query);
+        }
+
+        private void LoadRolesForRoleTab()
+        {
+            string query = "SELECT ROLE FROM DBA_ROLES ORDER BY ROLE";
+            ExecuteReaderToCombo(cmbRoleToAssign, query);
+        }
+
+        private void LoadUsersForRoleTab()
+        {
+            string query = "SELECT USERNAME FROM DBA_USERS WHERE ACCOUNT_STATUS = 'OPEN' AND USERNAME NOT IN ('SYS','SYSTEM','DBSNMP','XDB') ORDER BY USERNAME";
+            ExecuteReaderToCombo(cmbRoleGrantee, query);
+        }
+
+        private void LoadObjects()
+        {
+            if (cmbObjectOwner.SelectedItem == null || cmbObjectType.SelectedItem == null)
+            {
+                cmbObjectName.Items.Clear();
+                return;
+            }
+
+            string owner = cmbObjectOwner.SelectedItem.ToString();
+            string objType = cmbObjectType.SelectedItem.ToString();
+
+            string query = "SELECT OBJECT_NAME FROM DBA_OBJECTS WHERE OWNER = :owner AND OBJECT_TYPE = :objType ORDER BY OBJECT_NAME";
+            OracleParameter[] parameters = {
+                new OracleParameter("owner", owner),
+                new OracleParameter("objType", objType)
+            };
+
+            ExecuteReaderToCombo(cmbObjectName, query, parameters);
+        }
+
         private void LoadColumns()
         {
             clbColumns.Items.Clear();
-            string objType = cmbObjectType.SelectedItem?.ToString() ?? "";
-            string objName = cmbObjectName.SelectedItem?.ToString() ?? "";
 
-            if (string.IsNullOrEmpty(objName) || (objType != "TABLE" && objType != "VIEW"))
+            if (cmbObjectType.SelectedItem == null)
                 return;
 
-            const string sql =
-                "SELECT COLUMN_NAME FROM TABLE(BVDBA.FN_LIST_COLUMNS(:objName)) ORDER BY 1";
+            string objType = cmbObjectType.SelectedItem.ToString();
+            if (objType != "TABLE" && objType != "VIEW")
+                return;
+
+            if (cmbObjectOwner.SelectedItem == null || cmbObjectName.SelectedItem == null)
+                return;
+
+            string owner = cmbObjectOwner.SelectedItem.ToString();
+            string objName = cmbObjectName.SelectedItem.ToString();
+
+            string query = "SELECT COLUMN_NAME FROM DBA_TAB_COLUMNS WHERE OWNER = :owner AND TABLE_NAME = :objName ORDER BY COLUMN_ID";
+            OracleParameter[] parameters = {
+                new OracleParameter("owner", owner),
+                new OracleParameter("objName", objName)
+            };
 
             try
             {
                 using (var conn = new OracleConnection(_connStr))
                 {
                     conn.Open();
-                    using (var cmd = new OracleCommand(sql, conn))
+                    using (var cmd = new OracleCommand(query, conn))
                     {
-                        cmd.Parameters.Add("objName", OracleDbType.Varchar2).Value = objName;
+                        cmd.BindByName = true;
+                        cmd.Parameters.AddRange(parameters);
+
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
-                                clbColumns.Items.Add(reader.GetString(0));
+                                clbColumns.Items.Add(reader[0].ToString());
                         }
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                UIHelper.SetStatus(lblStatus1, "Loi tai danh sach cot: " + ex.Message, StatusType.Error);
-            }
-        }
-
-        /// <summary>
-        /// Load danh sách roles vào cmbRoleToAssign (Tab 2).
-        /// Gọi: SELECT * FROM TABLE(FN_LIST_ROLES)
-        /// </summary>
-        private void LoadRoles()
-        {
-            cmbRoleToAssign.Items.Clear();
-            const string sql = "SELECT ROLE FROM TABLE(BVDBA.FN_LIST_ROLES) ORDER BY ROLE";
-
-            try
-            {
-                using (var conn = new OracleConnection(_connStr))
+                try
                 {
-                    conn.Open();
-                    using (var cmd = new OracleCommand(sql, conn))
-                    using (var reader = cmd.ExecuteReader())
+                    string fallbackQuery = "SELECT COLUMN_NAME FROM ALL_TAB_COLUMNS WHERE OWNER = :owner AND TABLE_NAME = :objName ORDER BY COLUMN_ID";
+                    using (var conn = new OracleConnection(_connStr))
                     {
-                        while (reader.Read())
-                            cmbRoleToAssign.Items.Add(reader.GetString(0));
+                        conn.Open();
+                        using (var cmd = new OracleCommand(fallbackQuery, conn))
+                        {
+                            cmd.BindByName = true;
+                            cmd.Parameters.AddRange(parameters);
+
+                            using (var reader = cmd.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                    clbColumns.Items.Add(reader[0].ToString());
+                            }
+                        }
                     }
                 }
-                if (cmbRoleToAssign.Items.Count > 0)
-                    cmbRoleToAssign.SelectedIndex = 0;
-            }
-            catch (Exception ex)
-            {
-                UIHelper.SetStatus(lblStatus2, "Loi tai danh sach role: " + ex.Message, StatusType.Error);
-            }
-        }
-
-        /// <summary>
-        /// Load danh sách users vào cmbRoleGrantee (Tab 2).
-        /// Gọi: SELECT * FROM TABLE(FN_LIST_USERS)
-        /// </summary>
-        private void LoadUsers()
-        {
-            cmbRoleGrantee.Items.Clear();
-            const string sql = "SELECT USERNAME FROM TABLE(BVDBA.FN_LIST_USERS) ORDER BY USERNAME";
-
-            try
-            {
-                using (var conn = new OracleConnection(_connStr))
+                catch (Exception ex)
                 {
-                    conn.Open();
-                    using (var cmd = new OracleCommand(sql, conn))
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                            cmbRoleGrantee.Items.Add(reader.GetString(0));
-                    }
+                    UIHelper.SetStatus(lblStatus1, "Loi tai danh sach cot: " + ex.Message, StatusType.Error);
                 }
-                if (cmbRoleGrantee.Items.Count > 0)
-                    cmbRoleGrantee.SelectedIndex = 0;
-            }
-            catch (Exception ex)
-            {
-                UIHelper.SetStatus(lblStatus2, "Loi tai danh sach user: " + ex.Message, StatusType.Error);
             }
         }
 
-        // ============================================================
-        // LOGIC HIỂN THỊ / ẨN PANEL CỘT
-        // ============================================================
+        private void UpdateGrantOptionState()
+        {
+            string granteeType = cmbGranteeType.SelectedItem?.ToString();
+            if (granteeType == "Role")
+            {
+                chkGrantOption.Checked = false;
+                chkGrantOption.Enabled = false;
+            }
+            else
+            {
+                chkGrantOption.Enabled = true;
+            }
+        }
 
         private void RefreshPrivilegeList()
         {
@@ -436,56 +633,143 @@ namespace OracleAdminApp.Forms
                 clbPrivileges.Items.Add("INSERT");
                 clbPrivileges.Items.Add("UPDATE");
                 clbPrivileges.Items.Add("DELETE");
-                if (objType == "TABLE")
-                {
-                    clbPrivileges.Items.Add("ALTER");
-                    clbPrivileges.Items.Add("INDEX");
-                    clbPrivileges.Items.Add("REFERENCES");
-                }
             }
-            else // PROCEDURE, FUNCTION
+            else
             {
                 clbPrivileges.Items.Add("EXECUTE");
             }
+
+            UpdateObjectPrivLayout();
         }
 
         private void ClbPrivileges_ItemCheck(object sender, ItemCheckEventArgs e)
         {
-            string item = clbPrivileges.Items[e.Index].ToString();
-            if (item != "SELECT" && item != "UPDATE") return;
-
-            bool show = e.NewValue == CheckState.Checked;
-
-            // Nếu đang bỏ chọn, kiểm tra xem còn SELECT/UPDATE nào khác không
-            if (!show)
+            BeginInvoke((MethodInvoker)(() =>
             {
-                foreach (int i in clbPrivileges.CheckedIndices)
+                bool show = false;
+                string objType = cmbObjectType.SelectedItem?.ToString() ?? "";
+
+                for (int i = 0; i < clbPrivileges.Items.Count; i++)
                 {
-                    if (i == e.Index) continue;
-                    string other = clbPrivileges.Items[i].ToString();
-                    if (other == "SELECT" || other == "UPDATE") { show = true; break; }
+                    bool isChecked = clbPrivileges.GetItemChecked(i);
+
+                    if (i == e.Index)
+                        isChecked = e.NewValue == CheckState.Checked;
+
+                    if (isChecked)
+                    {
+                        string priv = clbPrivileges.Items[i].ToString();
+                        if (priv == "SELECT" || priv == "UPDATE")
+                        {
+                            show = true;
+                            break;
+                        }
+                    }
                 }
-            }
 
-            string objType = cmbObjectType.SelectedItem?.ToString() ?? "";
-            pnlColumnArea.Visible = show && (objType == "TABLE" || objType == "VIEW");
+                pnlColumnArea.Visible = show && (objType == "TABLE" || objType == "VIEW");
 
-            // Lazy load: chỉ gọi DB khi panel hiện ra và chưa có dữ liệu
-            if (pnlColumnArea.Visible && clbColumns.Items.Count == 0)
-                LoadColumns();
+                if (pnlColumnArea.Visible && clbColumns.Items.Count == 0)
+                    LoadColumns();
+
+                UpdateObjectPrivLayout();
+            }));
         }
 
-        // ============================================================
-        // XỬ LÝ SỰ KIỆN BUTTON
-        // ============================================================
+        private void LoadObjectPrivilegeGrid()
+        {
+            if (cmbGrantee.SelectedItem == null)
+            {
+                dgvObjectPrivileges.DataSource = null;
+                return;
+            }
 
-        /// <summary>
-        /// Cấp quyền đối tượng.
-        /// Gọi SP_GRANT_OBJ_PRIV cho mỗi quyền được chọn.
-        /// Tham số: p_privilege, p_object_owner, p_object_name,
-        ///          p_grantee, p_columns (NULL nếu toàn bảng),
-        ///          p_with_grant_opt ('YES'/'NO')
-        /// </summary>
+            string grantee = cmbGrantee.SelectedItem.ToString();
+
+            string query = @"
+                SELECT GRANTEE, OWNER, TABLE_NAME, PRIVILEGE, GRANTABLE
+                FROM DBA_TAB_PRIVS
+                WHERE GRANTEE = :grantee
+                ORDER BY OWNER, TABLE_NAME, PRIVILEGE";
+
+            OracleParameter[] parameters = {
+                new OracleParameter("grantee", grantee.ToUpper())
+            };
+
+            dgvObjectPrivileges.DataSource = ExecuteToDataTable(query, parameters);
+        }
+
+        private void LoadGrantOptionGrid()
+        {
+            if (cmbGrantee.SelectedItem == null)
+            {
+                dgvGrantOptionOnly.DataSource = null;
+                return;
+            }
+
+            string grantee = cmbGrantee.SelectedItem.ToString();
+
+            string query = @"
+                SELECT GRANTEE, OWNER, TABLE_NAME, PRIVILEGE, GRANTABLE
+                FROM DBA_TAB_PRIVS
+                WHERE GRANTEE = :grantee
+                  AND GRANTABLE = 'YES'
+                ORDER BY OWNER, TABLE_NAME, PRIVILEGE";
+
+            OracleParameter[] parameters = {
+                new OracleParameter("grantee", grantee.ToUpper())
+            };
+
+            dgvGrantOptionOnly.DataSource = ExecuteToDataTable(query, parameters);
+        }
+
+        private void LoadRolePrivilegeGrid()
+        {
+            if (cmbRoleGrantee.SelectedItem == null)
+            {
+                dgvRolePrivileges.DataSource = null;
+                return;
+            }
+
+            string grantee = cmbRoleGrantee.SelectedItem.ToString();
+
+            string query = @"
+                SELECT GRANTEE, GRANTED_ROLE, ADMIN_OPTION, DEFAULT_ROLE
+                FROM DBA_ROLE_PRIVS
+                WHERE GRANTEE = :grantee
+                ORDER BY GRANTED_ROLE";
+
+            OracleParameter[] parameters = {
+                new OracleParameter("grantee", grantee.ToUpper())
+            };
+
+            dgvRolePrivileges.DataSource = ExecuteToDataTable(query, parameters);
+        }
+
+        private void LoadAdminOptionGrid()
+        {
+            if (cmbRoleGrantee.SelectedItem == null)
+            {
+                dgvAdminOptionOnly.DataSource = null;
+                return;
+            }
+
+            string grantee = cmbRoleGrantee.SelectedItem.ToString();
+
+            string query = @"
+                SELECT GRANTEE, GRANTED_ROLE, ADMIN_OPTION, DEFAULT_ROLE
+                FROM DBA_ROLE_PRIVS
+                WHERE GRANTEE = :grantee
+                  AND ADMIN_OPTION = 'YES'
+                ORDER BY GRANTED_ROLE";
+
+            OracleParameter[] parameters = {
+                new OracleParameter("grantee", grantee.ToUpper())
+            };
+
+            dgvAdminOptionOnly.DataSource = ExecuteToDataTable(query, parameters);
+        }
+
         private void BtnGrant_Click(object sender, EventArgs e)
         {
             if (cmbGrantee.SelectedItem == null || cmbObjectName.SelectedItem == null)
@@ -493,154 +777,124 @@ namespace OracleAdminApp.Forms
                 UIHelper.SetStatus(lblStatus1, "Vui long chon day du thong tin!", StatusType.Warning);
                 return;
             }
+
             if (clbPrivileges.CheckedItems.Count == 0)
             {
                 UIHelper.SetStatus(lblStatus1, "Vui long chon it nhat mot quyen!", StatusType.Warning);
                 return;
             }
 
-            string grantee = cmbGrantee.SelectedItem.ToString();
-            string owner = cmbObjectOwner.SelectedItem?.ToString() ?? "BVDBA";
-            string objName = cmbObjectName.SelectedItem.ToString();
-            string grantOpt = chkGrantOption.Checked ? "YES" : "NO";
-
-            // Xây dựng danh sách cột (chỉ áp dụng khi không chọn "tất cả cột")
-            string columnList = null;
-            if (!chkAllColumns.Checked && clbColumns.CheckedItems.Count > 0)
-            {
-                var cols = new List<string>();
-                foreach (string col in clbColumns.CheckedItems) cols.Add(col);
-                columnList = string.Join(",", cols);
-            }
-
-            int successCount = 0;
-            var errors = new List<string>();
-
             try
             {
+                string granteeType = cmbGranteeType.SelectedItem?.ToString();
+                string grantee = cmbGrantee.SelectedItem.ToString();
+                string objOwner = cmbObjectOwner.Text;
+                string objName = cmbObjectName.Text;
+
+                string grantOption = "NO";
+                if (granteeType == "User")
+                    grantOption = chkGrantOption.Checked ? "YES" : "NO";
+
                 using (var conn = new OracleConnection(_connStr))
                 {
                     conn.Open();
 
                     foreach (string priv in clbPrivileges.CheckedItems)
                     {
-                        // INSERT/DELETE/EXECUTE không hỗ trợ phân quyền cột
-                        // — truyền NULL để SP tự xử lý
-                        string colsForPriv = (priv == "SELECT" || priv == "UPDATE")
-                            ? columnList
-                            : null;
+                        object columnsParam = DBNull.Value;
 
-                        try
+                        if ((priv == "SELECT" || priv == "UPDATE")
+                            && !chkAllColumns.Checked
+                            && clbColumns.CheckedItems.Count > 0)
                         {
-                            // Nhúng p_columns trực tiếp vào PL/SQL string để tránh lỗi ORA-00969
-                            // ODP.NET không bind NULL đúng cách cho VARCHAR2 IN parameter
-                            string colsLiteral = colsForPriv != null
-                                ? $"'{colsForPriv}'"  // VD: 'HOTEN,SODT'
-                                : "NULL";             // NULL literal, không dùng bind variable
+                            var cols = new List<string>();
+                            foreach (string col in clbColumns.CheckedItems)
+                                cols.Add(col);
 
-                            string plsql =
-                                "BEGIN BVDBA.SP_GRANT_OBJ_PRIV(" +
-                                "  p_privilege      => :p_privilege," +
-                                "  p_object_owner   => :p_object_owner," +
-                                "  p_object_name    => :p_object_name," +
-                                "  p_grantee        => :p_grantee," +
-                               $"  p_columns        => {colsLiteral}," +
-                                "  p_with_grant_opt => :p_with_grant_opt" +
-                                "); END;";
-
-                            using (var cmd = new OracleCommand(plsql, conn))
-                            {
-                                cmd.CommandType = CommandType.Text;
-                                cmd.Parameters.Add("p_privilege", OracleDbType.Varchar2).Value = priv;
-                                cmd.Parameters.Add("p_object_owner", OracleDbType.Varchar2).Value = owner;
-                                cmd.Parameters.Add("p_object_name", OracleDbType.Varchar2).Value = objName;
-                                cmd.Parameters.Add("p_grantee", OracleDbType.Varchar2).Value = grantee;
-                                cmd.Parameters.Add("p_with_grant_opt", OracleDbType.Varchar2).Value = grantOpt;
-                                cmd.ExecuteNonQuery();
-                                successCount++;
-                            }
+                            columnsParam = string.Join(",", cols);
                         }
-                        catch (OracleException oex)
+
+                        using (var cmd = new OracleCommand("SP_GRANT_OBJ_PRIV", conn))
                         {
-                            // Ghi nhận lỗi từng quyền nhưng tiếp tục cấp các quyền còn lại
-                            errors.Add($"{priv}: {oex.Message}");
+                            cmd.CommandType = CommandType.StoredProcedure;
+                            cmd.BindByName = true;
+
+                            cmd.Parameters.Add("p_privilege", OracleDbType.Varchar2).Value = priv;
+                            cmd.Parameters.Add("p_object_owner", OracleDbType.Varchar2).Value = objOwner;
+                            cmd.Parameters.Add("p_object_name", OracleDbType.Varchar2).Value = objName;
+                            cmd.Parameters.Add("p_grantee", OracleDbType.Varchar2).Value = grantee;
+                            cmd.Parameters.Add("p_columns", OracleDbType.Varchar2).Value = columnsParam;
+                            cmd.Parameters.Add("p_with_grant_opt", OracleDbType.Varchar2).Value = grantOption;
+
+                            cmd.ExecuteNonQuery();
                         }
                     }
                 }
 
-                if (errors.Count == 0)
-                {
-                    UIHelper.SetStatus(lblStatus1,
-                        $"Da cap {successCount} quyen cho {grantee} tren {owner}.{objName}",
-                        StatusType.Success);
-                }
-                else if (successCount > 0)
-                {
-                    UIHelper.SetStatus(lblStatus1,
-                        $"Cap duoc {successCount} quyen; loi: {string.Join("; ", errors)}",
-                        StatusType.Warning);
-                }
-                else
-                {
-                    UIHelper.SetStatus(lblStatus1, "Loi: " + string.Join("; ", errors), StatusType.Error);
-                }
+                LoadObjectPrivilegeGrid();
+                LoadGrantOptionGrid();
+
+                string grantInfo = (granteeType == "User" && grantOption == "YES")
+                    ? " (WITH GRANT OPTION)"
+                    : "";
+
+                UIHelper.SetStatus(
+                    lblStatus1,
+                    "Da cap quyen thanh cong cho " + grantee + " tren " + objOwner + "." + objName + grantInfo,
+                    StatusType.Success
+                );
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus1, "Loi ket noi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus1, "Loi cap quyen: " + ex.Message, StatusType.Error);
             }
         }
 
-        /// <summary>
-        /// Cấp role cho user.
-        /// Gọi SP_GRANT_ROLE(p_role, p_grantee, p_with_admin_opt)
-        /// </summary>
         private void BtnGrantRole_Click(object sender, EventArgs e)
         {
             string role = cmbRoleToAssign.SelectedItem?.ToString();
-            string user = cmbRoleGrantee.SelectedItem?.ToString();
+            string grantee = cmbRoleGrantee.SelectedItem?.ToString();
 
-            if (string.IsNullOrEmpty(role) || string.IsNullOrEmpty(user))
+            if (string.IsNullOrEmpty(role) || string.IsNullOrEmpty(grantee))
             {
                 UIHelper.SetStatus(lblStatus2, "Vui long chon day du thong tin!", StatusType.Warning);
                 return;
             }
 
-            string adminOpt = chkAdminOption.Checked ? "YES" : "NO";
-
             try
             {
+                string adminOption = chkAdminOption.Checked ? "YES" : "NO";
+
                 using (var conn = new OracleConnection(_connStr))
                 {
                     conn.Open();
-                    const string plsql =
-                        "BEGIN BVDBA.SP_GRANT_ROLE(" +
-                        "  p_role           => :p_role," +
-                        "  p_grantee        => :p_grantee," +
-                        "  p_with_admin_opt => :p_with_admin_opt" +
-                        "); END;";
-
-                    using (var cmd = new OracleCommand(plsql, conn))
+                    using (var cmd = new OracleCommand("SP_GRANT_ROLE", conn))
                     {
-                        cmd.CommandType = CommandType.Text;
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.BindByName = true;
+
                         cmd.Parameters.Add("p_role", OracleDbType.Varchar2).Value = role;
-                        cmd.Parameters.Add("p_grantee", OracleDbType.Varchar2).Value = user;
-                        cmd.Parameters.Add("p_with_admin_opt", OracleDbType.Varchar2).Value = adminOpt;
+                        cmd.Parameters.Add("p_grantee", OracleDbType.Varchar2).Value = grantee;
+                        cmd.Parameters.Add("p_with_admin_opt", OracleDbType.Varchar2).Value = adminOption;
+
                         cmd.ExecuteNonQuery();
                     }
                 }
-                UIHelper.SetStatus(lblStatus2,
-                    $"Da cap role {role} cho {user}" +
-                    (chkAdminOption.Checked ? " (WITH ADMIN OPTION)" : ""),
-                    StatusType.Success);
-            }
-            catch (OracleException oex)
-            {
-                UIHelper.SetStatus(lblStatus2, "Loi Oracle: " + oex.Message, StatusType.Error);
+
+                LoadRolePrivilegeGrid();
+                LoadAdminOptionGrid();
+
+                string adminInfo = adminOption == "YES" ? " (WITH ADMIN OPTION)" : "";
+
+                UIHelper.SetStatus(
+                    lblStatus2,
+                    "Da cap role " + role + " cho " + grantee + adminInfo,
+                    StatusType.Success
+                );
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus2, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus2, "Loi cap role: " + ex.Message, StatusType.Error);
             }
         }
     }
