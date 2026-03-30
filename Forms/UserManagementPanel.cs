@@ -32,7 +32,6 @@ namespace OracleAdminApp.Forms
             var header = UIHelper.CreateSectionHeader(
                 "Quan ly User",
                 "Tao moi, chinh sua, xoa tai khoan nguoi dung Oracle");
-            this.Controls.Add(header);
 
             // ── Toolbar ────────────────────────────────────────────────────
             var pnlToolbar = new Panel
@@ -77,8 +76,6 @@ namespace OracleAdminApp.Forms
             btnLock.Click    += (s, e) => ToggleLock(false);
             btnUnlock.Click  += (s, e) => ToggleLock(true);
 
-            this.Controls.Add(pnlToolbar);
-
             // ── Grid ───────────────────────────────────────────────────────
             var pnlGrid = new Panel
             {
@@ -97,9 +94,13 @@ namespace OracleAdminApp.Forms
             dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "LOCK_DATE",          HeaderText = "Ngay khoa",     FillWeight = 12 });
 
             dgvUsers.CellFormatting += DgvUsers_CellFormatting;
-            pnlGrid.Controls.Add(dgvUsers);
             lblStatus = UIHelper.CreateStatusLabel(pnlGrid);
+            pnlGrid.Controls.Add(dgvUsers);
+
+            // ── Thứ tự add vào this: Fill trước, Top sau (WinForms dock LIFO) ──
             this.Controls.Add(pnlGrid);
+            this.Controls.Add(pnlToolbar);
+            this.Controls.Add(header);
         }
 
         // ── Tô màu cột Trang thai ─────────────────────────────────────────

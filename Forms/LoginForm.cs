@@ -20,7 +20,7 @@ namespace OracleAdminApp.Forms
         private void InitializeLayout()
         {
             this.Text = "Oracle DB Admin – Đăng nhập";
-            this.Size = new Size(460, 580);
+            this.Size = new Size(460, 620);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -57,7 +57,7 @@ namespace OracleAdminApp.Forms
             pnlCard = new Panel
             {
                 BackColor = Color.White,
-                Size = new Size(380, 380),
+                Size = new Size(380, 420),
                 Location = new Point(38, 120)
             };
             RoundPanel(pnlCard);
@@ -115,7 +115,7 @@ namespace OracleAdminApp.Forms
                 Text = "",
                 AutoSize = false,
                 Size = new Size(380, 24),
-                Location = new Point(38, 515),
+                Location = new Point(38, 555),
                 TextAlign = ContentAlignment.MiddleCenter,
                 ForeColor = Color.FromArgb(255, 180, 80),
                 Font = new Font("Segoe UI", 9f),

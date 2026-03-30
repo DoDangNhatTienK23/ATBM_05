@@ -30,7 +30,6 @@ namespace OracleAdminApp.Forms
             var header = UIHelper.CreateSectionHeader(
                 "Quan ly Role",
                 "Tao moi, xoa role va xem danh sach role trong he thong");
-            this.Controls.Add(header);
 
             var pnlToolbar = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.Transparent };
 
@@ -60,8 +59,6 @@ namespace OracleAdminApp.Forms
             btnCreate.Click  += (s, e) => OpenCreateDialog();
             btnDelete.Click  += (s, e) => DeleteSelected();
 
-            this.Controls.Add(pnlToolbar);
-
             var pnlGrid = new Panel
             {
                 Dock        = DockStyle.Fill,
@@ -75,9 +72,13 @@ namespace OracleAdminApp.Forms
             dgvRoles.Columns.Add(new DataGridViewTextBoxColumn { Name = "COMMON",            HeaderText = "Common Role",    FillWeight = 15 });
             dgvRoles.Columns.Add(new DataGridViewTextBoxColumn { Name = "ORACLE_MAINTAINED", HeaderText = "Oracle Built-in",FillWeight = 15 });
 
-            pnlGrid.Controls.Add(dgvRoles);
             lblStatus = UIHelper.CreateStatusLabel(pnlGrid);
+            pnlGrid.Controls.Add(dgvRoles);
+
+            // ── Thứ tự add vào this: Fill trước, Top sau (WinForms dock LIFO) ──
             this.Controls.Add(pnlGrid);
+            this.Controls.Add(pnlToolbar);
+            this.Controls.Add(header);
         }
 
         // ── Load danh sách role từ Oracle qua FN_LIST_ROLES ──────────────
