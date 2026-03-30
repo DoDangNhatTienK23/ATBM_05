@@ -129,25 +129,17 @@ namespace OracleAdminApp.Forms
 
             try
             {
-                // Dùng DBA_USERS trực tiếp để lấy đủ 7 cột (FN_LIST_USERS không có EXPIRY_DATE/LOCK_DATE)
-                // Lọc bỏ user hệ thống giống FN_LIST_USERS
                 const string sql = @"
-                    SELECT USERNAME,
-                           ACCOUNT_STATUS,
-                           DEFAULT_TABLESPACE,
-                           PROFILE,
-                           TO_CHAR(CREATED,     'DD/MM/YYYY') AS CREATED,
-                           TO_CHAR(EXPIRY_DATE, 'DD/MM/YYYY') AS EXPIRY_DATE,
-                           TO_CHAR(LOCK_DATE,   'DD/MM/YYYY') AS LOCK_DATE
-                    FROM   DBA_USERS
-                    WHERE  USERNAME NOT IN (
-                        'SYS','SYSTEM','DBSNMP','APPQOSSYS','AUDSYS','CTXSYS',
-                        'DVSYS','GSMADMIN_INTERNAL','LBACSYS','MDSYS','OJVMSYS',
-                        'OLAPSYS','ORDDATA','ORDSYS','OUTLN','REMOTE_SCHEDULER_AGENT',
-                        'SI_INFORMTN_SCHEMA','SYS$UMF','SYSBACKUP','SYSDG','SYSKM',
-                        'SYSRAC','WMSYS','XDB','XS$NULL'
-                    )
-                    ORDER BY USERNAME";
+                    SELECT F.USERNAME,
+                           F.ACCOUNT_STATUS,
+                           F.DEFAULT_TABLESPACE,
+                           F.PROFILE,
+                           TO_CHAR(F.CREATED, 'DD/MM/YYYY') AS CREATED,
+                           TO_CHAR(U.EXPIRY_DATE, 'DD/MM/YYYY') AS EXPIRY_DATE,
+                           TO_CHAR(U.LOCK_DATE, 'DD/MM/YYYY') AS LOCK_DATE
+                    FROM TABLE(FN_LIST_USERS) F
+                    LEFT JOIN DBA_USERS U ON U.USERNAME = F.USERNAME
+                    ORDER BY F.USERNAME";
 
                 using (var conn = new OracleConnection(_connStr))
                 {

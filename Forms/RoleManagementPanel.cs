@@ -91,36 +91,14 @@ namespace OracleAdminApp.Forms
 
             try
             {
-                // Dùng trực tiếp DBA_ROLES (giống FN_LIST_ROLES nhưng đủ cột hơn)
-                // Lọc bỏ role hệ thống Oracle (danh sách giống FN_LIST_ROLES)
                 const string sql = @"
-                    SELECT ROLE,
-                           AUTHENTICATION_TYPE,
-                           COMMON,
-                           ORACLE_MAINTAINED
-                    FROM   DBA_ROLES
-                    WHERE  ROLE NOT IN (
-                        'ADM_PARALLEL_EXECUTE_TASK','APEX_ADMINISTRATOR_ROLE',
-                        'AQ_ADMINISTRATOR_ROLE','AQ_USER_ROLE','AUDIT_ADMIN',
-                        'AUDIT_VIEWER','AUTHENTICATEDUSER','CAPTURE_ADMIN',
-                        'CDB_DBA','CONNECT','CTXAPP','DATAPUMP_EXP_FULL_DATABASE',
-                        'DATAPUMP_IMP_FULL_DATABASE','DBA','DBFS_ROLE',
-                        'DELETE_CATALOG_ROLE','EXECUTE_CATALOG_ROLE',
-                        'EXP_FULL_DATABASE','GATHER_SYSTEM_STATISTICS',
-                        'GDS_CATALOG_SELECT','GLOBAL_AQ_USER_ROLE',
-                        'HS_ADMIN_EXECUTE_ROLE','HS_ADMIN_ROLE','HS_ADMIN_SELECT_ROLE',
-                        'IMP_FULL_DATABASE','JAVA_ADMIN','JAVA_DEPLOY',
-                        'JMXSERVER','LBAC_DBA','LOGSTDBY_ADMINISTRATOR',
-                        'OEM_ADVISOR','OEM_MONITOR','OLAP_DBA','OLAP_USER',
-                        'OLAP_XS_ADMIN','OPTIMIZER_PROCESSING_RATE','ORDADMIN',
-                        'PDB_DBA','PROVISIONER','RECOVERY_CATALOG_OWNER',
-                        'RECOVERY_CATALOG_OWNER_VPD','RESOURCE','SCHEDULER_ADMIN',
-                        'SELECT_CATALOG_ROLE','SPATIAL_CSW_ADMIN','SPATIAL_WFS_ADMIN',
-                        'SYSUMF_ROLE','WM_ADMIN_ROLE','XDBADMIN','XDB_SET_INVOKER',
-                        'XDB_WEBSERVICES','XDB_WEBSERVICES_OVER_HTTP',
-                        'XDB_WEBSERVICES_WITH_PUBLIC'
-                    )
-                    ORDER BY ROLE";
+                    SELECT F.ROLE,
+                           R.AUTHENTICATION_TYPE,
+                           R.COMMON,
+                           R.ORACLE_MAINTAINED
+                    FROM TABLE(FN_LIST_ROLES) F
+                    LEFT JOIN DBA_ROLES R ON R.ROLE = F.ROLE
+                    ORDER BY F.ROLE";
 
                 using (var conn = new OracleConnection(_connStr))
                 {
