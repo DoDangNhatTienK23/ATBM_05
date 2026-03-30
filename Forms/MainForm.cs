@@ -181,6 +181,7 @@ namespace OracleAdminApp.Forms
             else if (sender == btnGrantPriv)
             {
                 if (_grantPanel == null) _grantPanel = new GrantPrivilegePanel(ConnectionString);
+                else _grantPanel.RefreshRolesList();
                 panel = _grantPanel;
             }
             else if (sender == btnRevokePriv)

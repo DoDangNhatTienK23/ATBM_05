@@ -44,6 +44,12 @@ namespace OracleAdminApp.Forms
             LoadInitialData();
         }
 
+        public void RefreshRolesList()
+        {
+            LoadRolesForRoleTab();
+            LoadUsersForRoleTab();
+        }
+
         private void InitializeLayout()
         {
             Dock = DockStyle.Fill;
@@ -880,9 +886,10 @@ namespace OracleAdminApp.Forms
                         cmd.ExecuteNonQuery();
                     }
                 }
-
+                LoadRolesForRoleTab();
                 LoadRolePrivilegeGrid();
                 LoadAdminOptionGrid();
+
 
                 string adminInfo = adminOption == "YES" ? " (WITH ADMIN OPTION)" : "";
 
