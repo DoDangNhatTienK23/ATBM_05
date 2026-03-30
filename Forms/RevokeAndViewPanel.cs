@@ -7,23 +7,6 @@ using OracleAdminApp.Helpers;
 
 namespace OracleAdminApp.Forms
 {
-    // ══════════════════════════════════════════════════════════════════════════
-    // REVOKE PRIVILEGE PANEL
-    // Yêu cầu 4: Thu hồi quyền từ user hoặc role
-    //
-    // Flow:
-    //   1. Chọn Loại (User / Role) → cmbTargetType
-    //   2. Chọn tên              → cmbTarget  (load từ FN_LIST_USERS / FN_LIST_ROLES)
-    //   3. Chọn Loại quyền hiển thị → cmbPrivType
-    //   4. Bấm "Tải danh sách quyền" → LoadPrivileges()
-    //      - Quyền đối tượng + cột : SELECT * FROM TABLE(FN_GET_OBJ_PRIVS(:grantee))
-    //      - Quyền hệ thống        : SELECT * FROM TABLE(FN_GET_SYS_PRIVS(:grantee))
-    //      - Role được cấp         : SELECT * FROM TABLE(FN_GET_ROLE_PRIVS(:grantee))
-    //   5. Chọn dòng trong grid → bấm "Thu hồi quyền đã chọn"
-    //      - Quyền đối tượng  → SP_REVOKE_OBJ_PRIV(privilege, owner, object, grantee, columns)
-    //      - Quyền hệ thống   → SP_REVOKE_SYS_PRIV(privilege, grantee)
-    //      - Role             → SP_REVOKE_ROLE(role, grantee)
-    // ══════════════════════════════════════════════════════════════════════════
     public class RevokePrivilegePanel : UserControl
     {
         private ComboBox cmbTargetType, cmbTarget, cmbPrivType;
@@ -36,7 +19,7 @@ namespace OracleAdminApp.Forms
         {
             _connStr = connStr;
             InitializeLayout();
-            LoadTargets(); // load user/role ngay khi khởi tạo
+            LoadTargets();
         }
 
         private void InitializeLayout()
@@ -45,14 +28,10 @@ namespace OracleAdminApp.Forms
             this.BackColor = UIHelper.LightBg;
             this.Padding = new Padding(10);
 
-            // ── Tạo tất cả controls trước, add theo đúng thứ tự Dock ──────
-
-            // Header (Dock Top)
             var header = UIHelper.CreateSectionHeader(
                 "Thu hoi quyen",
                 "Xem va thu hoi quyen dang duoc cap cho user hoac role");
 
-            // Panel Top: card + nut Load (Dock Top)
             var pnlTop = new Panel
             {
                 Dock = DockStyle.Top,
@@ -87,7 +66,6 @@ namespace OracleAdminApp.Forms
             btnLoadPrivs.Click += (s, e) => LoadPrivileges();
             pnlTop.Controls.Add(btnLoadPrivs);
 
-            // Panel Bottom: nut Revoke (Dock Bottom)
             var pnlBottom = new Panel
             {
                 Dock = DockStyle.Bottom,
@@ -103,7 +81,6 @@ namespace OracleAdminApp.Forms
             pnlBottom.Resize += (s, e) =>
                 btnRevoke.Location = new Point(pnlBottom.Width - 230, 7);
 
-            // Grid (Dock Fill)
             var pnlGrid = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -125,14 +102,12 @@ namespace OracleAdminApp.Forms
             pnlGrid.Controls.Add(dgvCurrentPrivs);
             lblStatus = UIHelper.CreateStatusLabel(pnlGrid);
 
-            // ── Thứ tự add: Fill truoc, Bottom sau, Top sau cung ──────────
             this.Controls.Add(pnlGrid);
             this.Controls.Add(pnlBottom);
             this.Controls.Add(pnlTop);
             this.Controls.Add(header);
         }
 
-        // ── Tô màu dòng theo loại quyền ───────────────────────────────────
         private void DgvPrivs_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
             if (dgvCurrentPrivs.Columns[e.ColumnIndex].Name == "PRIV_TYPE" && e.Value != null)
@@ -147,9 +122,6 @@ namespace OracleAdminApp.Forms
             }
         }
 
-        // ── Load danh sách User hoặc Role vào cmbTarget ───────────────────
-        // User: SELECT * FROM TABLE(FN_LIST_USERS)  → cột USERNAME
-        // Role: SELECT * FROM TABLE(FN_LIST_ROLES)  → cột ROLE
         private void LoadTargets()
         {
             cmbTarget.Items.Clear();
@@ -181,11 +153,6 @@ namespace OracleAdminApp.Forms
             }
         }
 
-        // ── Load danh sách quyền hiện có của grantee ──────────────────────
-        // Gọi 3 pipelined function tuỳ theo cmbPrivType:
-        //   FN_GET_OBJ_PRIVS  → quyền đối tượng (TABLE/VIEW/PROC/FUNC) + quyền theo cột
-        //   FN_GET_SYS_PRIVS  → quyền hệ thống
-        //   FN_GET_ROLE_PRIVS → role được cấp
         private void LoadPrivileges()
         {
             if (cmbTarget.SelectedItem == null)
@@ -209,9 +176,6 @@ namespace OracleAdminApp.Forms
                 {
                     conn.Open();
 
-                    // ── 1. Quyền đối tượng + cột (FN_GET_OBJ_PRIVS) ──────
-                    // Trả về: GRANTEE, OWNER, OBJECT_NAME, OBJECT_TYPE, PRIVILEGE, GRANTABLE, COLUMN_NAME
-                    // OBJECT_TYPE = 'COLUMN' khi là quyền cấp theo cột
                     if (showObj)
                     {
                         const string sqlObj = @"
@@ -245,8 +209,6 @@ namespace OracleAdminApp.Forms
                         }
                     }
 
-                    // ── 2. Quyền hệ thống (FN_GET_SYS_PRIVS) ────────────
-                    // Trả về: GRANTEE, PRIVILEGE, ADMIN_OPT
                     if (showSys)
                     {
                         const string sqlSys = @"
@@ -272,8 +234,6 @@ namespace OracleAdminApp.Forms
                         }
                     }
 
-                    // ── 3. Role được cấp (FN_GET_ROLE_PRIVS) ─────────────
-                    // Trả về: GRANTEE, GRANTED_ROLE, ADMIN_OPTION, DEFAULT_ROLE
                     if (showRole)
                     {
                         const string sqlRole = @"
@@ -310,11 +270,6 @@ namespace OracleAdminApp.Forms
             }
         }
 
-        // ── Thu hồi quyền đang chọn ───────────────────────────────────────
-        // Đọc dòng được chọn → xác định loại → gọi đúng SP:
-        //   "Doi tuong" / "Cot" → SP_REVOKE_OBJ_PRIV(privilege, owner, object, grantee, columns)
-        //   "He thong"          → SP_REVOKE_SYS_PRIV(privilege, grantee)
-        //   "Role"              → SP_REVOKE_ROLE(role, grantee)
         private void BtnRevoke_Click(object sender, EventArgs e)
         {
             if (dgvCurrentPrivs.SelectedRows.Count == 0)
@@ -332,7 +287,6 @@ namespace OracleAdminApp.Forms
             string objName = row.Cells["OBJECT_NAME"].Value?.ToString() ?? "";
             string columns = row.Cells["COLUMNS"].Value?.ToString() ?? "";
 
-            // Xây thông báo xác nhận
             string confirmMsg;
             if (privType == "Role")
                 confirmMsg = $"Thu hoi role \"{privilege}\" tu \"{grantee}\"?";
@@ -358,7 +312,6 @@ namespace OracleAdminApp.Forms
 
                     if (privType == "Role")
                     {
-                        // SP_REVOKE_ROLE(p_role, p_grantee)
                         using (var cmd = new OracleCommand("SP_REVOKE_ROLE", conn))
                         {
                             cmd.CommandType = CommandType.StoredProcedure;
@@ -369,7 +322,6 @@ namespace OracleAdminApp.Forms
                     }
                     else if (privType == "He thong")
                     {
-                        // SP_REVOKE_SYS_PRIV(p_privilege, p_grantee)
                         using (var cmd = new OracleCommand("SP_REVOKE_SYS_PRIV", conn))
                         {
                             cmd.CommandType = CommandType.StoredProcedure;
@@ -380,10 +332,6 @@ namespace OracleAdminApp.Forms
                     }
                     else
                     {
-                        // "Doi tuong" hoặc "Cot"
-                        // SP_REVOKE_OBJ_PRIV(p_privilege, p_object_owner, p_object_name,
-                        //                    p_grantee,   p_columns DEFAULT NULL)
-                        // p_columns chỉ truyền khi privType == "Cot"
                         using (var cmd = new OracleCommand("SP_REVOKE_OBJ_PRIV", conn))
                         {
                             cmd.CommandType = CommandType.StoredProcedure;
@@ -403,7 +351,7 @@ namespace OracleAdminApp.Forms
                 }
 
                 UIHelper.SetStatus(lblStatus, "Da thu hoi quyen thanh cong!", StatusType.Success);
-                LoadPrivileges(); // refresh grid
+                LoadPrivileges();
             }
             catch (Exception ex)
             {
@@ -413,19 +361,6 @@ namespace OracleAdminApp.Forms
     }
 
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // VIEW PRIVILEGE PANEL
-    // Yêu cầu 5: Xem toàn bộ quyền của user hoặc role
-    //
-    // Flow:
-    //   1. Chọn Loại (User / Role) → cmbViewType
-    //   2. Chọn tên                → cmbViewTarget (load từ FN_LIST_USERS / FN_LIST_ROLES)
-    //   3. Bấm "Xem quyền" → LoadPrivileges()
-    //      Tab "Quyen doi tuong" : FN_GET_OBJ_PRIVS  (OBJECT_TYPE != 'COLUMN')
-    //      Tab "Quyen theo cot"  : FN_GET_OBJ_PRIVS  (OBJECT_TYPE == 'COLUMN')
-    //      Tab "Quyen he thong"  : FN_GET_SYS_PRIVS
-    //      Tab "Role duoc cap"   : FN_GET_ROLE_PRIVS
-    // ══════════════════════════════════════════════════════════════════════════
     public class ViewPrivilegePanel : UserControl
     {
         private ComboBox cmbViewType, cmbViewTarget;
@@ -452,7 +387,6 @@ namespace OracleAdminApp.Forms
                 "Xem toan bo quyen dang duoc cap cho user hoac role");
             this.Controls.Add(header);
 
-            // ── Card tìm kiếm ──────────────────────────────────────────────
             var card = UIHelper.CreateCard(10, 65, 700, 90, "TIM KIEM");
             this.Controls.Add(card);
 
@@ -478,7 +412,6 @@ namespace OracleAdminApp.Forms
             };
             this.Controls.Add(lblCount);
 
-            // ── TabControl kết quả ─────────────────────────────────────────
             tabResults = new TabControl
             {
                 Location = new Point(10, 182),
@@ -527,7 +460,6 @@ namespace OracleAdminApp.Forms
             return tab;
         }
 
-        // ── Load danh sách User hoặc Role vào cmbViewTarget ───────────────
         private void LoadTargets()
         {
             cmbViewTarget.Items.Clear();
@@ -558,7 +490,6 @@ namespace OracleAdminApp.Forms
             }
         }
 
-        // ── Load quyền thật từ Oracle ──────────────────────────────────────
         private void LoadPrivileges()
         {
             if (cmbViewTarget.SelectedItem == null) return;
@@ -577,9 +508,6 @@ namespace OracleAdminApp.Forms
                 {
                     conn.Open();
 
-                    // ── Quyền đối tượng + quyền cột (FN_GET_OBJ_PRIVS) ───
-                    // OBJECT_TYPE = 'COLUMN' → tab Quyen theo cot
-                    // Còn lại                → tab Quyen doi tuong
                     const string sqlObj = @"
                         SELECT OWNER, OBJECT_NAME, OBJECT_TYPE,
                                PRIVILEGE, GRANTABLE, COLUMN_NAME
@@ -620,7 +548,6 @@ namespace OracleAdminApp.Forms
                         }
                     }
 
-                    // ── Quyền hệ thống (FN_GET_SYS_PRIVS) ────────────────
                     const string sqlSys = @"
                         SELECT PRIVILEGE, ADMIN_OPT
                         FROM   TABLE(FN_GET_SYS_PRIVS(:t))
@@ -637,7 +564,6 @@ namespace OracleAdminApp.Forms
                                 );
                     }
 
-                    // ── Role được cấp (FN_GET_ROLE_PRIVS) ────────────────
                     const string sqlRole = @"
                         SELECT GRANTED_ROLE, ADMIN_OPTION, DEFAULT_ROLE
                         FROM   TABLE(FN_GET_ROLE_PRIVS(:t))
