@@ -1,49 +1,42 @@
 -- ============================================================
--- FILE: phan_he_1_clean.sql
--- MÔN HỌC: CSC12001 - An toàn và Bảo mật Dữ liệu trong HTTT
--- MỤC ĐÍCH: Chỉ phục vụ PHÂN HỆ 1 - Ứng dụng Quản trị CSDL Oracle
+-- NOI DUNG:
+--   SECTION 0: Bootstrap - SYS tao BVDBA (DBA cua he thong)
+--   SECTION 1: BVDBA tao cac bang (Doi tuong cap quyen)
+--   SECTION 2: BVDBA tao user/role 
+--   SECTION 3: BVDBA tao view/procedure/function
+--   SECTION 4: Cac procedure/function API phuc vu ung dung
+--   SECTION 5: Kiem tra script
 --
--- NỘI DUNG:
---   SECTION 0: Bootstrap - SYS tạo BVDBA (DBA của hệ thống)
---   SECTION 1: BVDBA tạo các bảng mẫu (đối tượng để demo cấp quyền)
---   SECTION 2: BVDBA tạo user/role mẫu (đối tượng để demo cấp quyền)
---   SECTION 3: BVDBA tạo view/procedure/function mẫu (đủ loại đối tượng)
---   SECTION 4: Các procedure/function phục vụ giao diện WinForm Phân hệ 1
---   SECTION 5: Kiểm tra nhanh
---
--- THỰC THI: Chạy theo thứ tự từ trên xuống.
+-- THUC THI: Chay theo thu tu tu tren xuong.
 -- ============================================================
 
 -- ============================================================
 -- SECTION 0: BOOTSTRAP
--- Đăng nhập: SYS AS SYSDBA, Service name = XEPDB1
--- Mục đích: Tạo tài khoản BVDBA - DBA của hệ thống bệnh viện.
---            Đây là tài khoản duy nhất mà Phân hệ 1 (WinForm) dùng
---            để kết nối và thực hiện toàn bộ thao tác quản trị.
--- Phục vụ: Tất cả 5 yêu cầu của Phân hệ 1
+-- Dang nhap: SYS AS SYSDBA, Service name = XEPDB1
+-- Muc dich: Tao tai khoan BVDBA - DBA cua he thong benh vien.
+--           Tai khoan nay dung de ket noi va thuc hien thao tac quan tri.
 -- ============================================================
 
--- Đảm bảo đang làm việc trong đúng PDB
+-- Dam bao dang lam viec trong dung PDB
 ALTER SESSION SET CONTAINER = XEPDB1;
 
--- Tạo tablespace riêng cho hệ thống bệnh viện
+-- Tao tablespace rieng cho he thong benh vien
 CREATE TABLESPACE BENHVIEN_TBS
     DATAFILE 'benhvien01.dbf' SIZE 100M
     AUTOEXTEND ON NEXT 50M MAXSIZE 1G
     EXTENT MANAGEMENT LOCAL SEGMENT SPACE MANAGEMENT AUTO;
 
--- Tạo BVDBA - schema owner và DBA của hệ thống
+-- Tao BVDBA - schema owner va DBA cua he thong
 CREATE USER BVDBA
     IDENTIFIED BY "BvDba#2026"
     DEFAULT TABLESPACE BENHVIEN_TBS
     QUOTA UNLIMITED ON BENHVIEN_TBS
     PROFILE DEFAULT;
 
--- Cấp DBA role để BVDBA có đủ quyền quản trị
+-- Cap DBA role cho BVDBA
 GRANT DBA TO BVDBA;
 
--- Cấp thêm các quyền cần thiết để BVDBA quản lý user/role/privilege
--- (Phân hệ 1 yêu cầu: tạo/xóa/sửa user, role, cấp/thu hồi quyền)
+-- Cap quyen de BVDBA co the quan ly user/role/privilege tren ung dung
 GRANT CREATE USER             TO BVDBA;
 GRANT ALTER USER              TO BVDBA;
 GRANT DROP USER               TO BVDBA;
@@ -54,7 +47,7 @@ GRANT GRANT ANY ROLE          TO BVDBA;
 GRANT GRANT ANY PRIVILEGE     TO BVDBA;
 GRANT GRANT ANY OBJECT PRIVILEGE TO BVDBA;
 
--- Cấp quyền đọc data dictionary để giao diện hiển thị user/role/privilege
+-- Cap quyen doc data dictionary de ung dung hien thi thong tin
 GRANT SELECT ON DBA_USERS        TO BVDBA;
 GRANT SELECT ON DBA_ROLES        TO BVDBA;
 GRANT SELECT ON DBA_ROLE_PRIVS   TO BVDBA;
@@ -71,16 +64,12 @@ COMMIT;
 
 
 -- ============================================================
--- SECTION 1: TẠO CÁC BẢNG MẪU
--- Đăng nhập: BVDBA, Service name = XEPDB1
--- Mục đích: Tạo các bảng đại diện cho schema bệnh viện.
---            Đây là các ĐỐI TƯỢNG để Phân hệ 1 demo:
---            cấp quyền SELECT/INSERT/UPDATE/DELETE/EXECUTE trên đó,
---            bao gồm cấp quyền đến mức cột (SELECT/UPDATE theo cột).
--- Phục vụ: Yêu cầu 3 (cấp quyền đối tượng), Yêu cầu 5 (xem quyền)
+-- SECTION 1: TAO CAC BANG
+-- Dang nhap: BVDBA, Service name = XEPDB1
+-- Muc dich: Tao cac bang dai dien cho schema benh vien.
 -- ============================================================
 
--- Bảng NHÂNVIÊN - dùng để demo cấp quyền SELECT cột, UPDATE cột
+-- Bang NHANVIEN 
 CREATE TABLE NHANVIEN (
     MANV        VARCHAR2(20)   NOT NULL,
     HOTEN       NVARCHAR2(100) NOT NULL,
@@ -93,7 +82,7 @@ CREATE TABLE NHANVIEN (
     CONSTRAINT PK_NHANVIEN PRIMARY KEY (MANV)
 );
 
--- Bảng BỆNHNHÂN - dùng để demo cấp quyền INSERT (không theo cột)
+-- Bang BENHNHAN 
 CREATE TABLE BENHNHAN (
     MABN        VARCHAR2(20)   NOT NULL,
     TENBN       NVARCHAR2(100) NOT NULL,
@@ -104,7 +93,7 @@ CREATE TABLE BENHNHAN (
     CONSTRAINT PK_BENHNHAN PRIMARY KEY (MABN)
 );
 
--- Bảng HSBA - dùng để demo cấp UPDATE theo cột cụ thể
+-- Bang HSBA 
 CREATE TABLE HSBA (
     MAHSBA      VARCHAR2(20)   NOT NULL,
     MABN        VARCHAR2(20),
@@ -115,7 +104,7 @@ CREATE TABLE HSBA (
     CONSTRAINT PK_HSBA PRIMARY KEY (MAHSBA)
 );
 
--- Bảng DONTHUOC - dùng để demo DELETE (không theo cột)
+-- Bang DONTHUOC 
 CREATE TABLE DONTHUOC (
     MAHSBA      VARCHAR2(20)   NOT NULL,
     TENTHUOC    NVARCHAR2(200) NOT NULL,
@@ -124,7 +113,7 @@ CREATE TABLE DONTHUOC (
     CONSTRAINT PK_DONTHUOC PRIMARY KEY (MAHSBA, TENTHUOC)
 );
 
--- Dữ liệu mẫu tối thiểu để giao diện không trống
+-- Du lieu khoi tao
 INSERT INTO NHANVIEN VALUES ('NV001', N'Nguyễn Văn An',  'M', DATE '1985-01-01', '012345678901', '0901000001', N'Bác sĩ/Y sĩ',    N'Tiêu hóa');
 INSERT INTO NHANVIEN VALUES ('NV002', N'Trần Thị Bình',  'F', DATE '1990-05-15', '012345678902', '0901000002', N'Điều phối viên', NULL);
 INSERT INTO NHANVIEN VALUES ('NV003', N'Lê Văn Cường',   'M', DATE '1988-08-20', '012345678903', '0901000003', N'Kỹ thuật viên',  N'Xét nghiệm');
@@ -139,25 +128,18 @@ COMMIT;
 
 
 -- ============================================================
--- SECTION 2: TẠO USER VÀ ROLE MẪU
--- Đăng nhập: BVDBA, Service name = XEPDB1
--- Mục đích: Tạo sẵn một số user và role mẫu để Phân hệ 1 demo
---            các thao tác: xem danh sách, cấp quyền, thu hồi quyền,
---            xem thông tin quyền.
--- Phục vụ: Yêu cầu 1, 2, 3, 4, 5 của Phân hệ 1
+-- SECTION 2: TAO USER VA ROLE 
+-- Dang nhap: BVDBA, Service name = XEPDB1
+-- Muc dich: Khoi tao cac user va role co ban cho he thong
 -- ============================================================
 
--- --- Role mẫu đại diện các nhóm trong bệnh viện ---
--- Phân hệ 1 sẽ demo: tạo role, cấp quyền cho role, cấp role cho user
+-- --- Role dai dien cac nhom trong benh vien ---
+CREATE ROLE ROLE_BACSI;         
+CREATE ROLE ROLE_DIEUPHOIVIEN;  
+CREATE ROLE ROLE_KYTHUATVIEN;   
+CREATE ROLE ROLE_BENHNHAN;      
 
-CREATE ROLE ROLE_BACSI;         -- đại diện nhóm Bác sĩ/Y sĩ
-CREATE ROLE ROLE_DIEUPHOIVIEN;  -- đại diện nhóm Điều phối viên
-CREATE ROLE ROLE_KYTHUATVIEN;   -- đại diện nhóm Kỹ thuật viên
-CREATE ROLE ROLE_BENHNHAN;      -- đại diện nhóm Bệnh nhân
-
--- --- User mẫu đại diện từng vai trò ---
--- Đặt password đơn giản để dễ demo; trong thực tế phải theo chính sách mật khẩu
-
+-- --- User dai dien tung vai tro ---
 CREATE USER U_BACSI01
     IDENTIFIED BY "Bacsi01#2026"
     DEFAULT TABLESPACE BENHVIEN_TBS
@@ -183,10 +165,10 @@ CREATE USER U_BN01
     DEFAULT TABLESPACE BENHVIEN_TBS
     QUOTA 0 ON BENHVIEN_TBS;
 
--- Tất cả user cần CREATE SESSION để đăng nhập
+-- Cap quyen login cho cac user
 GRANT CREATE SESSION TO U_BACSI01, U_BACSI02, U_DPV01, U_KTV01, U_BN01;
 
--- Gán role cho user (demo cấp role cho user - Yêu cầu 3a)
+-- Gan role khoi tao cho user 
 GRANT ROLE_BACSI        TO U_BACSI01, U_BACSI02;
 GRANT ROLE_DIEUPHOIVIEN TO U_DPV01;
 GRANT ROLE_KYTHUATVIEN  TO U_KTV01;
@@ -196,17 +178,11 @@ COMMIT;
 
 
 -- ============================================================
--- SECTION 3: TẠO VIEW / PROCEDURE / FUNCTION MẪU
--- Đăng nhập: BVDBA, Service name = XEPDB1
--- Mục đích: Tạo đủ 4 loại đối tượng mà Phân hệ 1 yêu cầu hỗ trợ
---            cấp quyền: TABLE (đã có), VIEW, STORED PROCEDURE, FUNCTION.
---            Lưu ý: quyền trên mỗi loại đối tượng khác nhau.
--- Phục vụ: Yêu cầu 3c (cấp quyền trên table/view/proc/function)
+-- SECTION 3: TAO VIEW / PROCEDURE / FUNCTION 
+-- Dang nhap: BVDBA, Service name = XEPDB1
 -- ============================================================
 
--- --- VIEW mẫu ---
--- Quyền trên view: SELECT, INSERT, UPDATE, DELETE (tương tự table)
--- SELECT/UPDATE có thể phân quyền đến cột
+-- --- VIEW ---
 CREATE OR REPLACE VIEW V_BENHNHAN_BASIC AS
     SELECT MABN, TENBN, PHAI, NGAYSINH
     FROM   BENHNHAN;
@@ -215,8 +191,7 @@ CREATE OR REPLACE VIEW V_HSBA_SUMMARY AS
     SELECT H.MAHSBA, H.MABN, B.TENBN, H.NGAY, H.CHANDOAN, H.KETLUAN
     FROM   HSBA H JOIN BENHNHAN B ON H.MABN = B.MABN;
 
--- --- STORED PROCEDURE mẫu ---
--- Quyền trên procedure: chỉ có EXECUTE (không phân cấp theo cột)
+-- --- STORED PROCEDURE ---
 CREATE OR REPLACE PROCEDURE SP_THEM_BENHNHAN (
     p_mabn   IN VARCHAR2,
     p_tenbn  IN NVARCHAR2,
@@ -248,8 +223,7 @@ BEGIN
 END SP_CAP_NHAT_HSBA;
 /
 
--- --- FUNCTION mẫu ---
--- Quyền trên function: chỉ có EXECUTE (không phân cấp theo cột)
+-- --- FUNCTION ---
 CREATE OR REPLACE FUNCTION FN_DEM_BENHNHAN
 RETURN NUMBER AS
     v_count NUMBER;
@@ -275,18 +249,17 @@ COMMIT;
 
 
 -- ============================================================
--- SECTION 4: PROCEDURE/FUNCTION PHỤC VỤ GIAO DIỆN PHÂN HỆ 1
--- Đăng nhập: BVDBA, Service name = XEPDB1
--- Mục đích: WinForm Phân hệ 1 gọi các procedure/function này
---            để thực hiện 5 yêu cầu quản trị mà không viết DDL
---            trực tiếp trong C# (an toàn hơn, tránh SQL injection).
+-- SECTION 4: PROCEDURE/FUNCTION API PHUC VU UNG DUNG
+-- Dang nhap: BVDBA, Service name = XEPDB1
+-- Muc dich: Cung cap cac API de ung dung goi, tranh viet DDL 
+--           truc tiep nham giam thieu rui ro SQL Injection.
 -- ============================================================
 
 -- -------------------------------------------------------
--- YÊU CẦU 1: Tạo / Xóa / Sửa USER hoặc ROLE
+-- QUAN LY USER / ROLE
 -- -------------------------------------------------------
 
--- Tạo user mới
+-- Tao user moi
 CREATE OR REPLACE PROCEDURE SP_CREATE_USER (
     p_username   IN VARCHAR2,
     p_password   IN VARCHAR2,
@@ -303,7 +276,7 @@ BEGIN
 END SP_CREATE_USER;
 /
 
--- Xóa user
+-- Xoa user
 CREATE OR REPLACE PROCEDURE SP_DROP_USER (
     p_username IN VARCHAR2
 ) AS
@@ -313,7 +286,7 @@ BEGIN
 END SP_DROP_USER;
 /
 
--- Đổi mật khẩu (sửa user)
+-- Doi mat khau 
 CREATE OR REPLACE PROCEDURE SP_ALTER_USER_PASSWORD (
     p_username    IN VARCHAR2,
     p_newpassword IN VARCHAR2
@@ -325,15 +298,15 @@ BEGIN
 END SP_ALTER_USER_PASSWORD;
 /
 
--- Khóa / Mở khóa tài khoản (sửa user)
--- p_action: 'LOCK' hoặc 'UNLOCK'
+-- Khoa / Mo khoa tai khoan 
+-- p_action: 'LOCK' hoac 'UNLOCK'
 CREATE OR REPLACE PROCEDURE SP_LOCK_UNLOCK_USER (
     p_username IN VARCHAR2,
-    p_action   IN VARCHAR2  -- 'LOCK' | 'UNLOCK'
+    p_action   IN VARCHAR2  
 ) AS
 BEGIN
     IF UPPER(p_action) NOT IN ('LOCK','UNLOCK') THEN
-        RAISE_APPLICATION_ERROR(-20001, 'p_action phải là LOCK hoặc UNLOCK');
+        RAISE_APPLICATION_ERROR(-20001, 'p_action phai la LOCK hoac UNLOCK');
     END IF;
     EXECUTE IMMEDIATE
         'ALTER USER ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_username) ||
@@ -341,7 +314,7 @@ BEGIN
 END SP_LOCK_UNLOCK_USER;
 /
 
--- Tạo role
+-- Tao role
 CREATE OR REPLACE PROCEDURE SP_CREATE_ROLE (
     p_rolename IN VARCHAR2
 ) AS
@@ -351,7 +324,7 @@ BEGIN
 END SP_CREATE_ROLE;
 /
 
--- Xóa role
+-- Xoa role
 CREATE OR REPLACE PROCEDURE SP_DROP_ROLE (
     p_rolename IN VARCHAR2
 ) AS
@@ -363,10 +336,10 @@ END SP_DROP_ROLE;
 
 
 -- -------------------------------------------------------
--- YÊU CẦU 2: Xem danh sách USER và ROLE
+-- DANH SACH USER VA ROLE
 -- -------------------------------------------------------
 
--- Danh sách user: WinForm gọi SELECT * FROM TABLE(FN_LIST_USERS)
+-- Danh sach user
 CREATE OR REPLACE TYPE T_USER_ROW AS OBJECT (
     USERNAME          VARCHAR2(128),
     ACCOUNT_STATUS    VARCHAR2(32),
@@ -384,7 +357,7 @@ BEGIN
     FOR r IN (
         SELECT USERNAME, ACCOUNT_STATUS, CREATED, DEFAULT_TABLESPACE, PROFILE
         FROM   DBA_USERS
-        WHERE  USERNAME NOT IN (  -- loại bỏ user hệ thống Oracle
+        WHERE  USERNAME NOT IN (  -- Loai bo user he thong Oracle
             'SYS','SYSTEM','DBSNMP','APPQOSSYS','AUDSYS','CTXSYS',
             'DVSYS','GSMADMIN_INTERNAL','LBACSYS','MDSYS','OJVMSYS',
             'OLAPSYS','ORDDATA','ORDSYS','OUTLN','REMOTE_SCHEDULER_AGENT',
@@ -399,7 +372,7 @@ BEGIN
 END FN_LIST_USERS;
 /
 
--- Danh sách role: WinForm gọi SELECT * FROM TABLE(FN_LIST_ROLES)
+-- Danh sach role
 CREATE OR REPLACE TYPE T_ROLE_ROW AS OBJECT (
     ROLE              VARCHAR2(128),
     PASSWORD_REQUIRED VARCHAR2(8)
@@ -414,7 +387,7 @@ BEGIN
     FOR r IN (
         SELECT ROLE, PASSWORD_REQUIRED
         FROM   DBA_ROLES
-        WHERE  ROLE NOT IN (  -- loại bỏ role hệ thống Oracle
+        WHERE  ROLE NOT IN (  -- Loai bo role he thong Oracle
             'ADM_PARALLEL_EXECUTE_TASK','APEX_ADMINISTRATOR_ROLE',
             'AQ_ADMINISTRATOR_ROLE','AQ_USER_ROLE','AUDIT_ADMIN',
             'AUDIT_VIEWER','AUTHENTICATEDUSER','CAPTURE_ADMIN',
@@ -442,7 +415,7 @@ BEGIN
 END FN_LIST_ROLES;
 /
 
--- Danh sách object có thể cấp quyền (table/view/proc/function của BVDBA)
+-- Danh sach cac object 
 CREATE OR REPLACE TYPE T_OBJECT_ROW AS OBJECT (
     OBJECT_NAME  VARCHAR2(128),
     OBJECT_TYPE  VARCHAR2(23),
@@ -466,7 +439,7 @@ BEGIN
 END FN_LIST_OBJECTS;
 /
 
--- Danh sách cột của một bảng/view (dùng khi cấp quyền SELECT/UPDATE theo cột)
+-- Danh sach cot cua mot bang/view 
 CREATE OR REPLACE TYPE T_COLUMN_ROW AS OBJECT (
     COLUMN_NAME  VARCHAR2(128),
     DATA_TYPE    VARCHAR2(128),
@@ -493,16 +466,11 @@ END FN_LIST_COLUMNS;
 
 
 -- -------------------------------------------------------
--- YÊU CẦU 3: Cấp quyền
---   3a. Cấp quyền cho user, cấp quyền cho role, cấp role cho user
---   3b. Có/không WITH GRANT OPTION
---   3c. Phân quyền đến mức cột với SELECT/UPDATE;
---       INSERT/DELETE không theo cột
+-- THUC THI CAP QUYEN
 -- -------------------------------------------------------
 
--- 3a
--- Cấp quyền hệ thống (system privilege) cho user/role
--- p_with_admin_opt: 'YES' = WITH ADMIN OPTION | 'NO' = không
+-- Cap quyen he thong (system privilege)
+-- p_with_admin_opt: 'YES' = WITH ADMIN OPTION | 'NO' = khong
 CREATE OR REPLACE PROCEDURE SP_GRANT_SYS_PRIV (
     p_privilege      IN VARCHAR2,
     p_grantee        IN VARCHAR2,
@@ -519,13 +487,9 @@ BEGIN
 END SP_GRANT_SYS_PRIV;
 /
 
--- Cấp quyền đối tượng (object privilege) cho user/role
--- Hỗ trợ: TABLE, VIEW  -> SELECT, INSERT, UPDATE, DELETE
---          PROCEDURE, FUNCTION -> EXECUTE
--- p_columns: danh sách cột cách nhau bởi dấu phẩy, VD: 'HOTEN,SODT'
---            Chỉ áp dụng khi p_privilege là SELECT hoặc UPDATE
---            NULL = cấp trên toàn bảng/view
--- p_with_grant_opt: 'YES' = WITH GRANT OPTION | 'NO' = không
+-- Cap quyen doi tuong (object privilege) 
+-- p_columns: danh sach cot cach nhau boi dau phay, VD: 'HOTEN,SODT'
+-- p_with_grant_opt: 'YES' = WITH GRANT OPTION | 'NO' = khong
 CREATE OR REPLACE PROCEDURE SP_GRANT_OBJ_PRIV (
     p_privilege      IN VARCHAR2,
     p_object_owner   IN VARCHAR2,
@@ -543,48 +507,43 @@ BEGIN
     v_object := DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_owner) || '.' ||
                 DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_name);
 
-    -- Chặn INSERT, DELETE phân quyền theo mức cột
+    -- Kiem tra tinh hop le khi cap quyen theo cot
     IF p_columns IS NOT NULL AND v_priv IN ('INSERT','DELETE','EXECUTE') THEN
         RAISE_APPLICATION_ERROR(-20002, 'Quyen ' || v_priv || ' khong ho tro phan quyen theo cot!');
     END IF;
 
-    -- Xử lý quyền UPDATE trên mức cột 
+    -- Xu ly quyen UPDATE tren muc cot 
     IF p_columns IS NOT NULL AND v_priv = 'UPDATE' THEN
         v_sql := 'GRANT UPDATE (' || p_columns || ') ON ' || v_object ||
                  ' TO ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
 
-    -- Xử lý quyền SELECT trên mức cột (TẠO VIEW TRUNG GIAN)
+    -- Xu ly quyen SELECT tren muc cot (Tao View trung gian)
     ELSIF p_columns IS NOT NULL AND v_priv = 'SELECT' THEN
-        -- Khởi tạo tên View tự động, ví dụ: V_NHANVIEN_U_BACSI01
         v_view_name := 'V_' || SUBSTR(p_object_name, 1, 15) || '_' || SUBSTR(p_grantee, 1, 10);
 
-        -- Lệnh DDL tạo View chỉ chứa các cột được chọn
         v_sql := 'CREATE OR REPLACE VIEW ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_owner) || '.' || v_view_name ||
                  ' AS SELECT ' || p_columns || ' FROM ' || v_object;
         EXECUTE IMMEDIATE v_sql;
 
-        -- Đổi lệnh GRANT sang cấp quyền SELECT trên View vừa tạo thay vì bảng gốc
         v_sql := 'GRANT SELECT ON ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_owner) || '.' || v_view_name ||
                  ' TO ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
 
-    -- Xử lý cấp quyền trên toàn đối tượng (Khi người dùng không chọn cột)
+    -- Xu ly cap quyen tren toan doi tuong
     ELSE
         v_sql := 'GRANT ' || v_priv || ' ON ' || v_object ||
                  ' TO ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
     END IF;
 
-    -- Xử lý tùy chọn WITH GRANT OPTION
+    -- Xu ly tuy chon WITH GRANT OPTION
     IF UPPER(p_with_grant_opt) = 'YES' THEN
         v_sql := v_sql || ' WITH GRANT OPTION';
     END IF;
 
-    -- Thực thi câu lệnh GRANT cuối cùng
     EXECUTE IMMEDIATE v_sql;
 END SP_GRANT_OBJ_PRIV;
 /
 
--- Cấp role cho user
--- p_with_admin_opt: 'YES' = WITH ADMIN OPTION | 'NO' = không
+-- Cap role cho user
 CREATE OR REPLACE PROCEDURE SP_GRANT_ROLE (
     p_role           IN VARCHAR2,
     p_grantee        IN VARCHAR2,
@@ -601,27 +560,22 @@ BEGIN
 END SP_GRANT_ROLE;
 /
 
--- Test
--- Tạo user U_TEST_SQL, pass 123456, tablespace mặc định là BENHVIEN_TBS
+-- Test thuc thi tao user va cap quyen
 EXEC SP_CREATE_USER('U_TEST_SQL', '123456');
 
--- Kiểm tra xem user đã vào hệ thống chưa (Dùng hàm bạn đã viết)
 SELECT * FROM TABLE(FN_LIST_USERS) WHERE USERNAME = 'U_TEST_SQL';
 
--- Tham số: (Quyền, Owner, Tên_Bảng, Người_Nhận, Danh_Sách_Cột, Grant_Option)
 EXEC SP_GRANT_OBJ_PRIV('SELECT', 'BVDBA', 'BENHNHAN', 'U_TEST_SQL', NULL, 'NO');
 
--- Kiểm tra quyền vừa cấp
 SELECT * FROM DBA_TAB_PRIVS WHERE GRANTEE = 'U_TEST_SQL' AND TABLE_NAME = 'BENHNHAN';
 
--- Truyền danh sách cột 'HOTEN, SODT' vào tham số p_columns
 EXEC SP_GRANT_OBJ_PRIV('SELECT', 'BVDBA', 'NHANVIEN', 'U_TEST_SQL', 'HOTEN, SODT', 'NO');
 
 -- -------------------------------------------------------
--- YÊU CẦU 4: Thu hồi quyền từ user hoặc role
+-- THU HOI QUYEN 
 -- -------------------------------------------------------
 
--- Thu hồi quyền đối tượng
+-- Thu hoi quyen doi tuong
 CREATE OR REPLACE PROCEDURE SP_REVOKE_OBJ_PRIV (
     p_privilege    IN VARCHAR2,
     p_object_owner IN VARCHAR2,
@@ -652,7 +606,7 @@ BEGIN
 END SP_REVOKE_OBJ_PRIV;
 /
 
--- Thu hồi quyền hệ thống
+-- Thu hoi quyen he thong
 CREATE OR REPLACE PROCEDURE SP_REVOKE_SYS_PRIV (
     p_privilege IN VARCHAR2,
     p_grantee   IN VARCHAR2
@@ -664,7 +618,7 @@ BEGIN
 END SP_REVOKE_SYS_PRIV;
 /
 
--- Thu hồi role từ user
+-- Thu hoi role 
 CREATE OR REPLACE PROCEDURE SP_REVOKE_ROLE (
     p_role    IN VARCHAR2,
     p_grantee IN VARCHAR2
@@ -678,11 +632,10 @@ END SP_REVOKE_ROLE;
 
 
 -- -------------------------------------------------------
--- YÊU CẦU 5: Xem thông tin quyền của user hoặc role
+-- TRUY VAN THONG TIN QUYEN 
 -- -------------------------------------------------------
 
--- Xem quyền đối tượng (bao gồm quyền cấp theo cột)
--- WinForm gọi: SELECT * FROM TABLE(FN_GET_OBJ_PRIVS('U_BACSI01'))
+-- Xem quyen doi tuong 
 CREATE OR REPLACE TYPE T_OBJPRIV_ROW AS OBJECT (
     GRANTEE     VARCHAR2(128),
     OWNER       VARCHAR2(128),
@@ -690,7 +643,7 @@ CREATE OR REPLACE TYPE T_OBJPRIV_ROW AS OBJECT (
     OBJECT_TYPE VARCHAR2(23),
     PRIVILEGE   VARCHAR2(40),
     GRANTABLE   VARCHAR2(3),
-    COLUMN_NAME VARCHAR2(128)   -- NULL nếu quyền cấp trên toàn đối tượng
+    COLUMN_NAME VARCHAR2(128)   
 );
 /
 CREATE OR REPLACE TYPE T_OBJPRIV_TABLE AS TABLE OF T_OBJPRIV_ROW;
@@ -700,7 +653,7 @@ CREATE OR REPLACE FUNCTION FN_GET_OBJ_PRIVS (
     p_grantee IN VARCHAR2
 ) RETURN T_OBJPRIV_TABLE PIPELINED AS
 BEGIN
-    -- Quyền cấp trên toàn đối tượng (table/view/proc/function)
+    -- Quyen cap tren toan doi tuong 
     FOR r IN (
         SELECT TP.GRANTEE, TP.OWNER, TP.TABLE_NAME,
                O.OBJECT_TYPE, TP.PRIVILEGE, TP.GRANTABLE
@@ -714,7 +667,7 @@ BEGIN
                                r.OBJECT_TYPE, r.PRIVILEGE, r.GRANTABLE, NULL));
     END LOOP;
 
-    -- Quyền cấp theo cột (SELECT/UPDATE cột cụ thể)
+    -- Quyen cap theo cot 
     FOR c IN (
         SELECT GRANTEE, OWNER, TABLE_NAME, PRIVILEGE, GRANTABLE, COLUMN_NAME
         FROM   DBA_COL_PRIVS
@@ -727,7 +680,7 @@ BEGIN
 END FN_GET_OBJ_PRIVS;
 /
 
--- Xem quyền hệ thống của user/role
+-- Xem quyen he thong 
 CREATE OR REPLACE TYPE T_SYSPRIV_ROW AS OBJECT (
     GRANTEE   VARCHAR2(128),
     PRIVILEGE VARCHAR2(40),
@@ -752,7 +705,7 @@ BEGIN
 END FN_GET_SYS_PRIVS;
 /
 
--- Xem role được cấp cho user/role
+-- Xem role
 CREATE OR REPLACE TYPE T_ROLEPRIV_ROW AS OBJECT (
     GRANTEE      VARCHAR2(128),
     GRANTED_ROLE VARCHAR2(128),
@@ -783,45 +736,45 @@ COMMIT;
 
 
 -- ============================================================
--- SECTION 5: KIỂM TRA NHANH
--- Đăng nhập: BVDBA
+-- SECTION 5: KIEM TRA TRANG THAI
+-- Dang nhap: BVDBA
 -- ============================================================
 
--- Kiểm tra bảng đã tạo
+-- Kiem tra object da tao
 SELECT OBJECT_NAME, OBJECT_TYPE, STATUS
 FROM   USER_OBJECTS
 WHERE  OBJECT_TYPE IN ('TABLE','VIEW','PROCEDURE','FUNCTION')
 ORDER  BY OBJECT_TYPE, OBJECT_NAME;
 
--- Kiểm tra user mẫu
+-- Kiem tra user 
 SELECT * FROM TABLE(FN_LIST_USERS);
 
--- Kiểm tra role mẫu
+-- Kiem tra role 
 SELECT * FROM TABLE(FN_LIST_ROLES);
 
--- Kiểm tra quyền của U_BACSI01 (sau khi gán ROLE_BACSI)
+-- Kiem tra quyen cua U_BACSI01
 SELECT * FROM TABLE(FN_GET_ROLE_PRIVS('U_BACSI01'));
 
--- Kiểm tra dữ liệu mẫu
+-- Kiem tra du lieu 
 SELECT COUNT(*) AS SO_NV   FROM NHANVIEN;
 SELECT COUNT(*) AS SO_BN   FROM BENHNHAN;
 SELECT COUNT(*) AS SO_HSBA FROM HSBA;
 
 -- ============================================================
--- TÓM TẮT ĐỐI TƯỢNG ĐÃ TẠO
+-- TOM TAT DOI TUONG DA TAO
 -- ============================================================
 -- TABLESPACE : BENHVIEN_TBS
 -- USER (DBA) : BVDBA
--- USER (mẫu) : U_BACSI01, U_BACSI02, U_DPV01, U_KTV01, U_BN01
--- ROLE (mẫu) : ROLE_BACSI, ROLE_DIEUPHOIVIEN, ROLE_KYTHUATVIEN, ROLE_BENHNHAN
+-- USER       : U_BACSI01, U_BACSI02, U_DPV01, U_KTV01, U_BN01
+-- ROLE       : ROLE_BACSI, ROLE_DIEUPHOIVIEN, ROLE_KYTHUATVIEN, ROLE_BENHNHAN
 -- TABLE      : NHANVIEN, BENHNHAN, HSBA, DONTHUOC
 -- VIEW       : V_BENHNHAN_BASIC, V_HSBA_SUMMARY
--- PROCEDURE  : SP_THEM_BENHNHAN, SP_CAP_NHAT_HSBA (đối tượng demo)
+-- PROCEDURE  : SP_THEM_BENHNHAN, SP_CAP_NHAT_HSBA 
 --              SP_CREATE_USER, SP_DROP_USER, SP_ALTER_USER_PASSWORD,
 --              SP_LOCK_UNLOCK_USER, SP_CREATE_ROLE, SP_DROP_ROLE,
 --              SP_GRANT_SYS_PRIV, SP_GRANT_OBJ_PRIV, SP_GRANT_ROLE,
 --              SP_REVOKE_OBJ_PRIV, SP_REVOKE_SYS_PRIV, SP_REVOKE_ROLE
--- FUNCTION   : FN_DEM_BENHNHAN, FN_TEN_BENHNHAN (đối tượng demo)
+-- FUNCTION   : FN_DEM_BENHNHAN, FN_TEN_BENHNHAN 
 --              FN_LIST_USERS, FN_LIST_ROLES, FN_LIST_OBJECTS,
 --              FN_LIST_COLUMNS, FN_GET_OBJ_PRIVS, FN_GET_SYS_PRIVS,
 --              FN_GET_ROLE_PRIVS
