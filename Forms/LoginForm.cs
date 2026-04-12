@@ -182,14 +182,33 @@ namespace OracleAdminApp.Forms
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
                 string error = null;
+                string userRole = null; // Biến lưu vai trò của người dùng
+                string upperUsername = txtUsername.Text.Trim().ToUpper();
+
                 try
                 {
                     using (var conn = new Oracle.ManagedDataAccess.Client.OracleConnection(connStr))
                     {
-                        conn.Open(); // chỉ cần mở là đủ test connection
-                    }
+                        conn.Open();
 
-                    System.Threading.Thread.Sleep(800); // giả lập delay
+                        // Nếu KHÔNG PHẢI là Admin (BVDBA), truy vấn xem họ là ai
+                        if (upperUsername != "BVDBA" && upperUsername != "SYS" && upperUsername != "SYSTEM")
+                        {
+                            string sql = "SELECT VAITRO FROM BVDBA.VW_TC1_TOI_LA_AI";
+                            using (var cmd = new Oracle.ManagedDataAccess.Client.OracleCommand(sql, conn))
+                            {
+                                var result = cmd.ExecuteScalar();
+                                if (result != null)
+                                {
+                                    userRole = result.ToString();
+                                }
+                                else
+                                {
+                                    error = "Không tìm thấy thông tin định danh của tài khoản này trong hệ thống Bệnh viện!";
+                                }
+                            }
+                        }
+                    }
                 }
                 catch (Exception ex) { error = ex.Message; }
 
@@ -204,9 +223,36 @@ namespace OracleAdminApp.Forms
                     }
                     else
                     {
-                        var main = new MainForm(connStr, txtUsername.Text.Trim().ToUpper());
-                        main.Show();
-                        this.Hide();
+                        // ----------------------------------------------------
+                        // BỘ ĐỊNH TUYẾN (ROUTER) RẼ NHÁNH GIAO DIỆN
+                        // ----------------------------------------------------
+                        if (upperUsername == "BVDBA")
+                        {
+                            // 1. Mở giao diện Admin (Phân hệ 1)
+                            var main = new MainForm(connStr, upperUsername);
+                            main.Show();
+                        }
+                        else if (userRole == "Benh nhan")
+                        {
+                            // 2. Mở giao diện Bệnh nhân (Yêu cầu 1 - TC#5)
+                            // (Chúng ta sẽ tạo PatientForm ở bước tiếp theo)
+                            var patientForm = new PatientForm(connStr, upperUsername);
+                            patientForm.Show();
+                        }
+                        else if (userRole == "Ky thuat vien")
+                        {
+                            // 3. Mở giao diện Kỹ thuật viên (Yêu cầu 1 - TC#4)
+                            // (Chúng ta sẽ tạo TechnicianForm ở bước tiếp theo)
+                            var ktvForm = new TechnicianForm(connStr, upperUsername);
+                            ktvForm.Show();
+                        }
+                        else
+                        {
+                            MessageBox.Show($"Đăng nhập thành công nhưng chưa có giao diện cho vai trò: {userRole}");
+                            return; // Tạm dừng không ẩn LoginForm
+                        }
+
+                        this.Hide(); // Ẩn màn hình đăng nhập
                     }
                 }));
             });

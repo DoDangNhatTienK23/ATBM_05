@@ -92,11 +92,17 @@
     <Compile Include="Forms\MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\PatientForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Forms\RevokeAndViewPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Forms\RoleManagementPanel.cs">
       <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Forms\TechnicianForm.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\UserEditDialog.cs">
       <SubType>Form</SubType>
