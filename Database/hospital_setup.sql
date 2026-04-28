@@ -1666,9 +1666,7 @@ COMMIT;
 
 -- ============================================================
 -- B9: KIEM TRA SAU TICH HOP
--- ============================================================
-
--- Kiem tra object da tao
+-- ============================================================v
 SELECT OBJECT_NAME, OBJECT_TYPE, STATUS
 FROM   USER_OBJECTS
 WHERE  OBJECT_TYPE IN ('TABLE','VIEW','PROCEDURE','FUNCTION','PACKAGE','TYPE')
