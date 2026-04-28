@@ -1,4 +1,87 @@
 -- ============================================================
+-- PHAN HE TICH HOP: ADMIN MODULE (PH1) -> HE THONG Y TE (PH2)
+-- Chay thu tu:
+--   BLOCK A: SYS AS SYSDBA
+--   BLOCK B: BVDBA
+-- ============================================================
+
+
+-- ============================================================
+-- BLOCK A: SYS AS SYSDBA
+-- Tao BVDBA - DBA cua toan he thong
+-- (Bo qua neu BVDBA da ton tai)
+-- ============================================================
+ALTER SESSION SET CONTAINER = XEPDB1;
+
+-- Tao tablespace (neu chua co)
+DECLARE
+BEGIN
+    EXECUTE IMMEDIATE
+        'CREATE TABLESPACE BENHVIEN_TBS
+         DATAFILE ''benhvien01.dbf'' SIZE 100M
+         AUTOEXTEND ON NEXT 50M MAXSIZE 1G
+         EXTENT MANAGEMENT LOCAL SEGMENT SPACE MANAGEMENT AUTO';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+-- Tao BVDBA
+DECLARE
+BEGIN
+    EXECUTE IMMEDIATE
+        'CREATE USER BVDBA
+         IDENTIFIED BY "BvDba#2026"
+         DEFAULT TABLESPACE BENHVIEN_TBS
+         QUOTA UNLIMITED ON BENHVIEN_TBS
+         PROFILE DEFAULT';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+GRANT DBA                         TO BVDBA;
+GRANT CREATE USER                 TO BVDBA;
+GRANT ALTER USER                  TO BVDBA;
+GRANT DROP USER                   TO BVDBA;
+GRANT CREATE ROLE                 TO BVDBA;
+GRANT CREATE VIEW                 TO BVDBA;
+GRANT DROP ANY ROLE               TO BVDBA;
+GRANT GRANT ANY ROLE              TO BVDBA;
+GRANT GRANT ANY PRIVILEGE         TO BVDBA;
+GRANT GRANT ANY OBJECT PRIVILEGE  TO BVDBA;
+
+-- Quyen doc data dictionary (ho tro Phan he 1)
+GRANT SELECT ON DBA_USERS         TO BVDBA;
+GRANT SELECT ON DBA_ROLES         TO BVDBA;
+GRANT SELECT ON DBA_ROLE_PRIVS    TO BVDBA;
+GRANT SELECT ON DBA_SYS_PRIVS     TO BVDBA;
+GRANT SELECT ON DBA_TAB_PRIVS     TO BVDBA;
+GRANT SELECT ON DBA_COL_PRIVS     TO BVDBA;
+GRANT SELECT ON DBA_OBJECTS       TO BVDBA;
+GRANT SELECT ON DBA_TABLES        TO BVDBA;
+GRANT SELECT ON DBA_VIEWS         TO BVDBA;
+GRANT SELECT ON DBA_PROCEDURES    TO BVDBA;
+GRANT SELECT_CATALOG_ROLE         TO BVDBA;
+
+COMMIT;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- BLOCK B: BVDBA
+
+
+-- ============================================================
 -- HE THONG QUAN LY DU LIEU Y TE - BENH VIEN X
 -- Database: Oracle
 -- Mo ta: Tao bang + du lieu mau phuc vu cac yeu cau
@@ -712,3 +795,895 @@ BEGIN
     END LOOP;
 END;
 /
+
+-- ============================================================
+-- Yêu cầu 1 - Câu 3 (Phân hệ 2)
+-- VPD cho Điều phối viên (TC#2) và Bác sĩ/Y sĩ (TC#3)
+-- Luu y: chay bang schema owner (khong chay as SYS)
+-- ============================================================
+
+BEGIN
+    IF USER IN ('SYS', 'SYSTEM') THEN
+        RAISE_APPLICATION_ERROR(-20010, 'Vui long chay script bang schema owner, khong chay as SYS/SYSTEM.');
+    END IF;
+END;
+/
+
+-- -------------------------
+-- 1) ROLE VA PHAN QUYEN CO BAN
+-- -------------------------
+BEGIN
+    EXECUTE IMMEDIATE 'DROP ROLE RL_DIEUPHOIVIEN';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP ROLE RL_BACSI';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+CREATE ROLE RL_DIEUPHOIVIEN;
+CREATE ROLE RL_BACSI;
+
+GRANT CREATE SESSION TO RL_DIEUPHOIVIEN;
+GRANT CREATE SESSION TO RL_BACSI;
+
+-- Grant bang/cot (VPD chi loc dong, khong thay the GRANT)
+GRANT SELECT, INSERT, UPDATE ON BENHNHAN TO RL_DIEUPHOIVIEN;
+GRANT INSERT, UPDATE ON HSBA TO RL_DIEUPHOIVIEN;
+GRANT UPDATE ON HSBA_DV TO RL_DIEUPHOIVIEN;
+
+GRANT SELECT, UPDATE ON HSBA TO RL_BACSI;
+GRANT SELECT, UPDATE ON BENHNHAN TO RL_BACSI;
+GRANT INSERT, DELETE ON HSBA_DV TO RL_BACSI;
+GRANT INSERT, UPDATE, DELETE ON DONTHUOC TO RL_BACSI;
+
+GRANT UPDATE (MAKHOA, MABS) ON HSBA TO RL_DIEUPHOIVIEN;
+GRANT UPDATE (MAKTV) ON HSBA_DV TO RL_DIEUPHOIVIEN;
+
+GRANT UPDATE (CHANDOAN, DIEUTRI, KETLUAN) ON HSBA TO RL_BACSI;
+GRANT UPDATE (TIENSUBENH, TIENSUBENHGD, DIUNGthuoc) ON BENHNHAN TO RL_BACSI;
+
+-- Gan role cho user theo VAITRO
+BEGIN
+    FOR r IN (
+        SELECT ORACLE_USERNAME FROM NHANVIEN
+        WHERE VAITRO = N'Dieu phoi vien' AND ORACLE_USERNAME IS NOT NULL
+    ) LOOP
+        EXECUTE IMMEDIATE 'GRANT RL_DIEUPHOIVIEN TO ' || r.ORACLE_USERNAME;
+    END LOOP;
+
+    FOR r IN (
+        SELECT ORACLE_USERNAME FROM NHANVIEN
+        WHERE VAITRO = N'Bac si/Y si' AND ORACLE_USERNAME IS NOT NULL
+    ) LOOP
+        EXECUTE IMMEDIATE 'GRANT RL_BACSI TO ' || r.ORACLE_USERNAME;
+    END LOOP;
+END;
+/
+
+-- -------------------------
+-- 2) APPLICATION CONTEXT + LOGON TRIGGER
+-- -------------------------
+CREATE OR REPLACE PACKAGE PKG_VPD_HOSPITAL AS
+    PROCEDURE set_ctx;
+    FUNCTION vpd_predicate(p_schema VARCHAR2, p_obj VARCHAR2)
+        RETURN VARCHAR2;
+END PKG_VPD_HOSPITAL;
+/
+
+CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
+    PROCEDURE set_ctx IS
+        v_user   VARCHAR2(30);
+        v_manv   VARCHAR2(10);
+        v_vaitro NVARCHAR2(50);
+    BEGIN
+        v_user := SYS_CONTEXT('USERENV', 'SESSION_USER');
+
+        BEGIN
+            SELECT MANV, VAITRO
+            INTO v_manv, v_vaitro
+            FROM NHANVIEN
+            WHERE ORACLE_USERNAME = v_user;
+
+            DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', v_manv);
+            DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', v_vaitro);
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                DBMS_SESSION.CLEAR_CONTEXT('HOSPITAL_CTX', 'MANV');
+                DBMS_SESSION.CLEAR_CONTEXT('HOSPITAL_CTX', 'VAITRO');
+        END;
+    END set_ctx;
+
+    FUNCTION vpd_predicate(p_schema VARCHAR2, p_obj VARCHAR2)
+        RETURN VARCHAR2
+    IS
+        v_role NVARCHAR2(50) := SYS_CONTEXT('HOSPITAL_CTX', 'VAITRO');
+        v_manv VARCHAR2(10)  := SYS_CONTEXT('HOSPITAL_CTX', 'MANV');
+        v_user VARCHAR2(30)  := SYS_CONTEXT('USERENV', 'SESSION_USER');
+        v_stmt VARCHAR2(10)  := SYS_CONTEXT('USERENV', 'STATEMENT_TYPE');
+    BEGIN
+        IF SYS_CONTEXT('USERENV', 'ISDBA') = 'TRUE'
+           OR v_user IN ('SYS', 'SYSTEM') THEN
+            RETURN '1=1';
+        END IF;
+
+        IF v_role IS NULL OR v_manv IS NULL THEN
+            RETURN '1=0';
+        END IF;
+
+        CASE UPPER(p_obj)
+            WHEN 'BENHNHAN' THEN
+                IF v_role = 'Dieu phoi vien' THEN
+                    RETURN '1=1';
+                ELSIF v_role = 'Bac si/Y si' THEN
+                    IF v_stmt IN ('SELECT', 'UPDATE') THEN
+                        RETURN 'EXISTS (SELECT 1 FROM HSBA H ' ||
+                               'WHERE H.MABN = BENHNHAN.MABN ' ||
+                               'AND H.MABS = ''' || v_manv || ''')';
+                    ELSE
+                        RETURN '1=0';
+                    END IF;
+                ELSE
+                    RETURN '1=0';
+                END IF;
+
+            WHEN 'HSBA' THEN
+                IF v_role = 'Dieu phoi vien' THEN
+                    IF v_stmt IN ('SELECT', 'INSERT', 'UPDATE') THEN
+                        RETURN '1=1';
+                    ELSE
+                        RETURN '1=0';
+                    END IF;
+                ELSIF v_role = 'Bac si/Y si' THEN
+                    IF v_stmt IN ('SELECT', 'UPDATE') THEN
+                        RETURN 'MABS = ''' || v_manv || '''';
+                    ELSE
+                        RETURN '1=0';
+                    END IF;
+                ELSE
+                    RETURN '1=0';
+                END IF;
+
+            WHEN 'HSBA_DV' THEN
+                IF v_role = 'Dieu phoi vien' THEN
+                    IF v_stmt IN ('SELECT', 'UPDATE') THEN
+                        RETURN '1=1';
+                    ELSE
+                        RETURN '1=0';
+                    END IF;
+                ELSIF v_role = 'Bac si/Y si' THEN
+                    IF v_stmt IN ('SELECT', 'INSERT', 'DELETE') THEN
+                        RETURN 'MAHSBA IN (SELECT MAHSBA FROM HSBA ' ||
+                               'WHERE MABS = ''' || v_manv || ''')';
+                    ELSE
+                        RETURN '1=0';
+                    END IF;
+                ELSE
+                    RETURN '1=0';
+                END IF;
+
+            WHEN 'DONTHUOC' THEN
+                IF v_role = 'Bac si/Y si' THEN
+                    IF v_stmt IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE') THEN
+                        RETURN 'MAHSBA IN (SELECT MAHSBA FROM HSBA ' ||
+                               'WHERE MABS = ''' || v_manv || ''')';
+                    ELSE
+                        RETURN '1=0';
+                    END IF;
+                ELSE
+                    RETURN '1=0';
+                END IF;
+
+            ELSE
+                RETURN '1=0';
+        END CASE;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RETURN '1=0';
+    END vpd_predicate;
+END PKG_VPD_HOSPITAL;
+/
+
+BEGIN
+    EXECUTE IMMEDIATE 'DROP CONTEXT HOSPITAL_CTX';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+CREATE CONTEXT HOSPITAL_CTX USING PKG_VPD_HOSPITAL;
+/
+CREATE OR REPLACE TRIGGER TRG_SET_CTX_HOSPITAL
+AFTER LOGON ON DATABASE
+BEGIN
+    PKG_VPD_HOSPITAL.set_ctx;
+END;
+/
+
+-- -------------------------
+-- 3) GAN VPD POLICY
+-- -------------------------
+BEGIN
+    DBMS_RLS.DROP_POLICY(USER, 'BENHNHAN', 'VPD_BENHNHAN_TC2_TC3');
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+BEGIN
+    DBMS_RLS.DROP_POLICY(USER, 'HSBA', 'VPD_HSBA_TC2_TC3');
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+BEGIN
+    DBMS_RLS.DROP_POLICY(USER, 'HSBA_DV', 'VPD_HSBA_DV_TC2_TC3');
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+BEGIN
+    DBMS_RLS.DROP_POLICY(USER, 'DONTHUOC', 'VPD_DONTHUOC_TC3');
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+BEGIN
+    DBMS_RLS.ADD_POLICY(
+        object_schema     => USER,
+        object_name       => 'BENHNHAN',
+        policy_name       => 'VPD_BENHNHAN_TC2_TC3',
+        function_schema   => USER,
+        policy_function   => 'PKG_VPD_HOSPITAL.vpd_predicate',
+        statement_types   => 'SELECT,INSERT,UPDATE',
+        update_check      => TRUE,
+        sec_relevant_cols => 'TIENSUBENH,TIENSUBENHGD,DIUNGthuoc'
+    );
+
+    DBMS_RLS.ADD_POLICY(
+        object_schema     => USER,
+        object_name       => 'HSBA',
+        policy_name       => 'VPD_HSBA_TC2_TC3',
+        function_schema   => USER,
+        policy_function   => 'PKG_VPD_HOSPITAL.vpd_predicate',
+        statement_types   => 'SELECT,INSERT,UPDATE',
+        update_check      => TRUE,
+        sec_relevant_cols => 'CHANDOAN,DIEUTRI,KETLUAN,MAKHOA,MABS'
+    );
+
+    DBMS_RLS.ADD_POLICY(
+        object_schema     => USER,
+        object_name       => 'HSBA_DV',
+        policy_name       => 'VPD_HSBA_DV_TC2_TC3',
+        function_schema   => USER,
+        policy_function   => 'PKG_VPD_HOSPITAL.vpd_predicate',
+        statement_types   => 'SELECT,INSERT,UPDATE,DELETE',
+        update_check      => TRUE,
+        sec_relevant_cols => 'MAKTV'
+    );
+
+    DBMS_RLS.ADD_POLICY(
+        object_schema    => USER,
+        object_name      => 'DONTHUOC',
+        policy_name      => 'VPD_DONTHUOC_TC3',
+        function_schema  => USER,
+        policy_function  => 'PKG_VPD_HOSPITAL.vpd_predicate',
+        statement_types  => 'SELECT,INSERT,UPDATE,DELETE',
+        update_check     => TRUE
+    );
+END;
+/
+
+
+
+-- ============================================================
+-- BLOCK B: BVDBA
+-- (Cac section duoi day thuc thi voi session BVDBA)
+-- Gia su schema BENHNHAN, NHANVIEN, HSBA, HSBA_DV, DONTHUOC,
+-- THONGBAO, cac Role/View/Policy cua PH2 da ton tai.
+-- ============================================================
+
+
+-- ============================================================
+-- B1: TYPES HO TRO PIPELINED FUNCTION
+-- Tich hop tu PH1 Section 4
+-- ============================================================
+
+CREATE OR REPLACE TYPE T_USER_ROW AS OBJECT (
+    USERNAME           VARCHAR2(128),
+    ACCOUNT_STATUS     VARCHAR2(32),
+    CREATED            DATE,
+    DEFAULT_TABLESPACE VARCHAR2(30),
+    PROFILE            VARCHAR2(128)
+);
+/
+CREATE OR REPLACE TYPE T_USER_TABLE AS TABLE OF T_USER_ROW;
+/
+
+CREATE OR REPLACE TYPE T_ROLE_ROW AS OBJECT (
+    ROLE              VARCHAR2(128),
+    PASSWORD_REQUIRED VARCHAR2(8)
+);
+/
+CREATE OR REPLACE TYPE T_ROLE_TABLE AS TABLE OF T_ROLE_ROW;
+/
+
+CREATE OR REPLACE TYPE T_OBJECT_ROW AS OBJECT (
+    OBJECT_NAME VARCHAR2(128),
+    OBJECT_TYPE VARCHAR2(23),
+    STATUS      VARCHAR2(7)
+);
+/
+CREATE OR REPLACE TYPE T_OBJECT_TABLE AS TABLE OF T_OBJECT_ROW;
+/
+
+CREATE OR REPLACE TYPE T_COLUMN_ROW AS OBJECT (
+    COLUMN_NAME VARCHAR2(128),
+    DATA_TYPE   VARCHAR2(128),
+    NULLABLE    VARCHAR2(1)
+);
+/
+CREATE OR REPLACE TYPE T_COLUMN_TABLE AS TABLE OF T_COLUMN_ROW;
+/
+
+CREATE OR REPLACE TYPE T_OBJPRIV_ROW AS OBJECT (
+    GRANTEE     VARCHAR2(128),
+    OWNER       VARCHAR2(128),
+    OBJECT_NAME VARCHAR2(128),
+    OBJECT_TYPE VARCHAR2(23),
+    PRIVILEGE   VARCHAR2(40),
+    GRANTABLE   VARCHAR2(3),
+    COLUMN_NAME VARCHAR2(128)
+);
+/
+CREATE OR REPLACE TYPE T_OBJPRIV_TABLE AS TABLE OF T_OBJPRIV_ROW;
+/
+
+CREATE OR REPLACE TYPE T_SYSPRIV_ROW AS OBJECT (
+    GRANTEE   VARCHAR2(128),
+    PRIVILEGE VARCHAR2(40),
+    ADMIN_OPT VARCHAR2(3)
+);
+/
+CREATE OR REPLACE TYPE T_SYSPRIV_TABLE AS TABLE OF T_SYSPRIV_ROW;
+/
+
+CREATE OR REPLACE TYPE T_ROLEPRIV_ROW AS OBJECT (
+    GRANTEE      VARCHAR2(128),
+    GRANTED_ROLE VARCHAR2(128),
+    ADMIN_OPTION VARCHAR2(3),
+    DEFAULT_ROLE VARCHAR2(3)
+);
+/
+CREATE OR REPLACE TYPE T_ROLEPRIV_TABLE AS TABLE OF T_ROLEPRIV_ROW;
+/
+
+
+-- ============================================================
+-- B2: QUAN LY USER / ROLE
+-- Tich hop nguyen tu PH1 Section 4
+-- ============================================================
+
+-- Tao user moi
+CREATE OR REPLACE PROCEDURE SP_CREATE_USER (
+    p_username   IN VARCHAR2,
+    p_password   IN VARCHAR2,
+    p_tablespace IN VARCHAR2 DEFAULT 'BENHVIEN_TBS'
+) AS
+BEGIN
+    EXECUTE IMMEDIATE
+        'CREATE USER ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_username) ||
+        ' IDENTIFIED BY "' || p_password || '"' ||
+        ' DEFAULT TABLESPACE ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_tablespace) ||
+        ' QUOTA 0 ON '        || DBMS_ASSERT.SIMPLE_SQL_NAME(p_tablespace);
+    EXECUTE IMMEDIATE
+        'GRANT CREATE SESSION TO ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_username);
+END SP_CREATE_USER;
+/
+
+-- Xoa user
+CREATE OR REPLACE PROCEDURE SP_DROP_USER (
+    p_username IN VARCHAR2
+) AS
+BEGIN
+    EXECUTE IMMEDIATE
+        'DROP USER ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_username) || ' CASCADE';
+END SP_DROP_USER;
+/
+
+-- Doi mat khau
+CREATE OR REPLACE PROCEDURE SP_ALTER_USER_PASSWORD (
+    p_username    IN VARCHAR2,
+    p_newpassword IN VARCHAR2
+) AS
+BEGIN
+    EXECUTE IMMEDIATE
+        'ALTER USER ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_username) ||
+        ' IDENTIFIED BY "' || p_newpassword || '"';
+END SP_ALTER_USER_PASSWORD;
+/
+
+-- Khoa / Mo khoa tai khoan (p_action: 'LOCK' hoac 'UNLOCK')
+CREATE OR REPLACE PROCEDURE SP_LOCK_UNLOCK_USER (
+    p_username IN VARCHAR2,
+    p_action   IN VARCHAR2
+) AS
+BEGIN
+    IF UPPER(p_action) NOT IN ('LOCK','UNLOCK') THEN
+        RAISE_APPLICATION_ERROR(-20001, 'p_action phai la LOCK hoac UNLOCK');
+    END IF;
+    EXECUTE IMMEDIATE
+        'ALTER USER ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_username) ||
+        ' ACCOUNT '   || UPPER(p_action);
+END SP_LOCK_UNLOCK_USER;
+/
+
+-- Tao role
+CREATE OR REPLACE PROCEDURE SP_CREATE_ROLE (
+    p_rolename IN VARCHAR2
+) AS
+BEGIN
+    EXECUTE IMMEDIATE
+        'CREATE ROLE ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_rolename);
+END SP_CREATE_ROLE;
+/
+
+-- Xoa role
+CREATE OR REPLACE PROCEDURE SP_DROP_ROLE (
+    p_rolename IN VARCHAR2
+) AS
+BEGIN
+    EXECUTE IMMEDIATE
+        'DROP ROLE ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_rolename);
+END SP_DROP_ROLE;
+/
+
+
+-- ============================================================
+-- B3: DANH SACH USER / ROLE / OBJECT / COLUMN
+-- Tich hop tu PH1; bo sung LBACSYS vao exclusion list
+-- ============================================================
+
+-- Danh sach user ung dung (loai bo system user + LBACSYS)
+CREATE OR REPLACE FUNCTION FN_LIST_USERS
+RETURN T_USER_TABLE PIPELINED AS
+BEGIN
+    FOR r IN (
+        SELECT USERNAME, ACCOUNT_STATUS, CREATED, DEFAULT_TABLESPACE, PROFILE
+        FROM   DBA_USERS
+        WHERE  USERNAME NOT IN (
+            'SYS','SYSTEM','DBSNMP','APPQOSSYS','AUDSYS','CTXSYS',
+            'DVSYS','GSMADMIN_INTERNAL','LBACSYS','MDSYS','OJVMSYS',
+            'OLAPSYS','ORDDATA','ORDSYS','OUTLN','REMOTE_SCHEDULER_AGENT',
+            'SI_INFORMTN_SCHEMA','SYS$UMF','SYSBACKUP','SYSDG','SYSKM',
+            'SYSRAC','WMSYS','XDB','XS$NULL',
+            'BVDBA'  -- Loai bo chinh DBA khoi danh sach hien thi nguoi dung
+        )
+        ORDER BY USERNAME
+    ) LOOP
+        PIPE ROW(T_USER_ROW(r.USERNAME, r.ACCOUNT_STATUS, r.CREATED,
+                            r.DEFAULT_TABLESPACE, r.PROFILE));
+    END LOOP;
+END FN_LIST_USERS;
+/
+
+-- Danh sach role ung dung (loai bo system role)
+CREATE OR REPLACE FUNCTION FN_LIST_ROLES
+RETURN T_ROLE_TABLE PIPELINED AS
+BEGIN
+    FOR r IN (
+        SELECT ROLE, PASSWORD_REQUIRED
+        FROM   DBA_ROLES
+        WHERE  ROLE NOT IN (
+            'ADM_PARALLEL_EXECUTE_TASK','APEX_ADMINISTRATOR_ROLE',
+            'AQ_ADMINISTRATOR_ROLE','AQ_USER_ROLE','AUDIT_ADMIN',
+            'AUDIT_VIEWER','AUTHENTICATEDUSER','CAPTURE_ADMIN',
+            'CDB_DBA','CONNECT','CTXAPP','DATAPUMP_EXP_FULL_DATABASE',
+            'DATAPUMP_IMP_FULL_DATABASE','DBA','DBFS_ROLE',
+            'DELETE_CATALOG_ROLE','EXECUTE_CATALOG_ROLE',
+            'EXP_FULL_DATABASE','GATHER_SYSTEM_STATISTICS',
+            'GDS_CATALOG_SELECT','GLOBAL_AQ_USER_ROLE',
+            'HS_ADMIN_EXECUTE_ROLE','HS_ADMIN_ROLE','HS_ADMIN_SELECT_ROLE',
+            'IMP_FULL_DATABASE','JAVA_ADMIN','JAVA_DEPLOY',
+            'JMXSERVER','LBAC_DBA','LOGSTDBY_ADMINISTRATOR',
+            'OEM_ADVISOR','OEM_MONITOR','OLAP_DBA','OLAP_USER',
+            'OLAP_XS_ADMIN','OPTIMIZER_PROCESSING_RATE','ORDADMIN',
+            'PDB_DBA','PROVISIONER','RECOVERY_CATALOG_OWNER',
+            'RECOVERY_CATALOG_OWNER_VPD','RESOURCE','SCHEDULER_ADMIN',
+            'SELECT_CATALOG_ROLE','SPATIAL_CSW_ADMIN','SPATIAL_WFS_ADMIN',
+            'SYSUMF_ROLE','WM_ADMIN_ROLE','XDBADMIN','XDB_SET_INVOKER',
+            'XDB_WEBSERVICES','XDB_WEBSERVICES_OVER_HTTP',
+            'XDB_WEBSERVICES_WITH_PUBLIC'
+        )
+        ORDER BY ROLE
+    ) LOOP
+        PIPE ROW(T_ROLE_ROW(r.ROLE, r.PASSWORD_REQUIRED));
+    END LOOP;
+END FN_LIST_ROLES;
+/
+
+-- Danh sach object trong schema BVDBA
+CREATE OR REPLACE FUNCTION FN_LIST_OBJECTS
+RETURN T_OBJECT_TABLE PIPELINED AS
+BEGIN
+    FOR r IN (
+        SELECT OBJECT_NAME, OBJECT_TYPE, STATUS
+        FROM   USER_OBJECTS
+        WHERE  OBJECT_TYPE IN ('TABLE','VIEW','PROCEDURE','FUNCTION','PACKAGE')
+        ORDER  BY OBJECT_TYPE, OBJECT_NAME
+    ) LOOP
+        PIPE ROW(T_OBJECT_ROW(r.OBJECT_NAME, r.OBJECT_TYPE, r.STATUS));
+    END LOOP;
+END FN_LIST_OBJECTS;
+/
+
+-- Danh sach cot cua bang/view
+CREATE OR REPLACE FUNCTION FN_LIST_COLUMNS (
+    p_object_name IN VARCHAR2
+) RETURN T_COLUMN_TABLE PIPELINED AS
+BEGIN
+    FOR r IN (
+        SELECT COLUMN_NAME, DATA_TYPE, NULLABLE
+        FROM   USER_TAB_COLUMNS
+        WHERE  TABLE_NAME = UPPER(p_object_name)
+        ORDER  BY COLUMN_ID
+    ) LOOP
+        PIPE ROW(T_COLUMN_ROW(r.COLUMN_NAME, r.DATA_TYPE, r.NULLABLE));
+    END LOOP;
+END FN_LIST_COLUMNS;
+/
+
+
+-- ============================================================
+-- B4: CAP QUYEN
+-- Tich hop nguyen tu PH1 Section 4
+-- ============================================================
+
+-- Cap quyen he thong (WITH ADMIN OPTION tuy chon)
+CREATE OR REPLACE PROCEDURE SP_GRANT_SYS_PRIV (
+    p_privilege      IN VARCHAR2,
+    p_grantee        IN VARCHAR2,
+    p_with_admin_opt IN VARCHAR2 DEFAULT 'NO'
+) AS
+    v_sql VARCHAR2(500);
+BEGIN
+    v_sql := 'GRANT ' || p_privilege ||
+             ' TO '   || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
+    IF UPPER(p_with_admin_opt) = 'YES' THEN
+        v_sql := v_sql || ' WITH ADMIN OPTION';
+    END IF;
+    EXECUTE IMMEDIATE v_sql;
+END SP_GRANT_SYS_PRIV;
+/
+
+-- Cap quyen doi tuong (ho tro phan quyen theo cot cho SELECT va UPDATE)
+-- SELECT theo cot: tao View trung gian tranh lo thong tin nhay cam
+-- UPDATE theo cot: GRANT UPDATE(col)
+-- INSERT/DELETE/EXECUTE: khong ho tro theo cot
+CREATE OR REPLACE PROCEDURE SP_GRANT_OBJ_PRIV (
+    p_privilege      IN VARCHAR2,
+    p_object_owner   IN VARCHAR2,
+    p_object_name    IN VARCHAR2,
+    p_grantee        IN VARCHAR2,
+    p_columns        IN VARCHAR2 DEFAULT NULL,
+    p_with_grant_opt IN VARCHAR2 DEFAULT 'NO'
+) AS
+    v_sql       VARCHAR2(2000);
+    v_object    VARCHAR2(300);
+    v_priv      VARCHAR2(20);
+    v_view_name VARCHAR2(128);
+BEGIN
+    v_priv   := UPPER(TRIM(p_privilege));
+    v_object := DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_owner) || '.' ||
+                DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_name);
+
+    IF p_columns IS NOT NULL AND v_priv IN ('INSERT','DELETE','EXECUTE') THEN
+        RAISE_APPLICATION_ERROR(-20002,
+            'Quyen ' || v_priv || ' khong ho tro phan quyen theo cot!');
+    END IF;
+
+    IF p_columns IS NOT NULL AND v_priv = 'UPDATE' THEN
+        v_sql := 'GRANT UPDATE (' || p_columns || ') ON ' || v_object ||
+                 ' TO ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
+
+    ELSIF p_columns IS NOT NULL AND v_priv = 'SELECT' THEN
+        -- Tao View trung gian cho SELECT theo cot
+        v_view_name := 'V_' || SUBSTR(p_object_name,1,15) ||
+                       '_'   || SUBSTR(p_grantee,1,10);
+        v_sql := 'CREATE OR REPLACE VIEW ' ||
+                 DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_owner) || '.' ||
+                 v_view_name ||
+                 ' AS SELECT ' || p_columns || ' FROM ' || v_object;
+        EXECUTE IMMEDIATE v_sql;
+        v_sql := 'GRANT SELECT ON ' ||
+                 DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_owner) || '.' ||
+                 v_view_name ||
+                 ' TO ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
+
+    ELSE
+        v_sql := 'GRANT ' || v_priv || ' ON ' || v_object ||
+                 ' TO ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
+    END IF;
+
+    IF UPPER(p_with_grant_opt) = 'YES' THEN
+        v_sql := v_sql || ' WITH GRANT OPTION';
+    END IF;
+
+    EXECUTE IMMEDIATE v_sql;
+END SP_GRANT_OBJ_PRIV;
+/
+
+-- Gan role cho user/role (WITH ADMIN OPTION tuy chon)
+CREATE OR REPLACE PROCEDURE SP_GRANT_ROLE (
+    p_role           IN VARCHAR2,
+    p_grantee        IN VARCHAR2,
+    p_with_admin_opt IN VARCHAR2 DEFAULT 'NO'
+) AS
+    v_sql VARCHAR2(300);
+BEGIN
+    v_sql := 'GRANT ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_role) ||
+             ' TO '   || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
+    IF UPPER(p_with_admin_opt) = 'YES' THEN
+        v_sql := v_sql || ' WITH ADMIN OPTION';
+    END IF;
+    EXECUTE IMMEDIATE v_sql;
+END SP_GRANT_ROLE;
+/
+
+
+-- ============================================================
+-- B5: THU HOI QUYEN
+-- Tich hop nguyen tu PH1 Section 4
+-- ============================================================
+
+-- Thu hoi quyen doi tuong (ho tro theo cot)
+CREATE OR REPLACE PROCEDURE SP_REVOKE_OBJ_PRIV (
+    p_privilege    IN VARCHAR2,
+    p_object_owner IN VARCHAR2,
+    p_object_name  IN VARCHAR2,
+    p_grantee      IN VARCHAR2,
+    p_columns      IN VARCHAR2 DEFAULT NULL
+) AS
+    v_sql    VARCHAR2(2000);
+    v_object VARCHAR2(300);
+    v_priv   VARCHAR2(20);
+BEGIN
+    v_priv   := UPPER(TRIM(p_privilege));
+    v_object := DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_owner) || '.' ||
+                DBMS_ASSERT.SIMPLE_SQL_NAME(p_object_name);
+
+    IF p_columns IS NOT NULL AND v_priv IN ('SELECT','UPDATE') THEN
+        v_sql := 'REVOKE ' || v_priv ||
+                 ' (' || p_columns || ')' ||
+                 ' ON ' || v_object ||
+                 ' FROM ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
+    ELSE
+        v_sql := 'REVOKE ' || v_priv ||
+                 ' ON ' || v_object ||
+                 ' FROM ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
+    END IF;
+
+    EXECUTE IMMEDIATE v_sql;
+END SP_REVOKE_OBJ_PRIV;
+/
+
+-- Thu hoi quyen he thong
+CREATE OR REPLACE PROCEDURE SP_REVOKE_SYS_PRIV (
+    p_privilege IN VARCHAR2,
+    p_grantee   IN VARCHAR2
+) AS
+BEGIN
+    EXECUTE IMMEDIATE
+        'REVOKE ' || p_privilege ||
+        ' FROM '  || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
+END SP_REVOKE_SYS_PRIV;
+/
+
+-- Thu hoi role
+CREATE OR REPLACE PROCEDURE SP_REVOKE_ROLE (
+    p_role    IN VARCHAR2,
+    p_grantee IN VARCHAR2
+) AS
+BEGIN
+    EXECUTE IMMEDIATE
+        'REVOKE ' || DBMS_ASSERT.SIMPLE_SQL_NAME(p_role) ||
+        ' FROM '  || DBMS_ASSERT.SIMPLE_SQL_NAME(p_grantee);
+END SP_REVOKE_ROLE;
+/
+
+
+-- ============================================================
+-- B6: TRA CUU QUYEN CUA USER / ROLE
+-- Tich hop nguyen tu PH1 Section 4
+-- ============================================================
+
+-- Quyen doi tuong (bang + cot) cua mot grantee
+CREATE OR REPLACE FUNCTION FN_GET_OBJ_PRIVS (
+    p_grantee IN VARCHAR2
+) RETURN T_OBJPRIV_TABLE PIPELINED AS
+BEGIN
+    -- Quyen tren toan doi tuong
+    FOR r IN (
+        SELECT TP.GRANTEE, TP.OWNER, TP.TABLE_NAME,
+               O.OBJECT_TYPE, TP.PRIVILEGE, TP.GRANTABLE
+        FROM   DBA_TAB_PRIVS TP
+               LEFT JOIN DBA_OBJECTS O
+                   ON O.OWNER = TP.OWNER AND O.OBJECT_NAME = TP.TABLE_NAME
+        WHERE  UPPER(TP.GRANTEE) = UPPER(p_grantee)
+        ORDER  BY TP.OWNER, TP.TABLE_NAME, TP.PRIVILEGE
+    ) LOOP
+        PIPE ROW(T_OBJPRIV_ROW(r.GRANTEE, r.OWNER, r.TABLE_NAME,
+                               r.OBJECT_TYPE, r.PRIVILEGE, r.GRANTABLE, NULL));
+    END LOOP;
+
+    -- Quyen theo cot
+    FOR c IN (
+        SELECT GRANTEE, OWNER, TABLE_NAME, PRIVILEGE, GRANTABLE, COLUMN_NAME
+        FROM   DBA_COL_PRIVS
+        WHERE  UPPER(GRANTEE) = UPPER(p_grantee)
+        ORDER  BY OWNER, TABLE_NAME, COLUMN_NAME, PRIVILEGE
+    ) LOOP
+        PIPE ROW(T_OBJPRIV_ROW(c.GRANTEE, c.OWNER, c.TABLE_NAME,
+                               'COLUMN', c.PRIVILEGE, c.GRANTABLE, c.COLUMN_NAME));
+    END LOOP;
+END FN_GET_OBJ_PRIVS;
+/
+
+-- Quyen he thong cua mot grantee
+CREATE OR REPLACE FUNCTION FN_GET_SYS_PRIVS (
+    p_grantee IN VARCHAR2
+) RETURN T_SYSPRIV_TABLE PIPELINED AS
+BEGIN
+    FOR r IN (
+        SELECT GRANTEE, PRIVILEGE, ADMIN_OPTION
+        FROM   DBA_SYS_PRIVS
+        WHERE  UPPER(GRANTEE) = UPPER(p_grantee)
+        ORDER  BY PRIVILEGE
+    ) LOOP
+        PIPE ROW(T_SYSPRIV_ROW(r.GRANTEE, r.PRIVILEGE, r.ADMIN_OPTION));
+    END LOOP;
+END FN_GET_SYS_PRIVS;
+/
+
+-- Role duoc gan cho mot grantee
+CREATE OR REPLACE FUNCTION FN_GET_ROLE_PRIVS (
+    p_grantee IN VARCHAR2
+) RETURN T_ROLEPRIV_TABLE PIPELINED AS
+BEGIN
+    FOR r IN (
+        SELECT GRANTEE, GRANTED_ROLE, ADMIN_OPTION, DEFAULT_ROLE
+        FROM   DBA_ROLE_PRIVS
+        WHERE  UPPER(GRANTEE) = UPPER(p_grantee)
+        ORDER  BY GRANTED_ROLE
+    ) LOOP
+        PIPE ROW(T_ROLEPRIV_ROW(r.GRANTEE, r.GRANTED_ROLE,
+                                r.ADMIN_OPTION, r.DEFAULT_ROLE));
+    END LOOP;
+END FN_GET_ROLE_PRIVS;
+/
+
+
+-- ============================================================
+-- B7: VIEWS NGHIEP VU - THICH NGHI VOI SCHEMA PH2
+-- Tu PH1 Section 3, chinh sua tuong thich voi PH2
+-- ============================================================
+
+-- V_BENHNHAN_BASIC: thich nghi (khong con DIACHI, them CCCD)
+CREATE OR REPLACE VIEW V_BENHNHAN_BASIC AS
+    SELECT MABN, TENBN, PHAI, NGAYSINH, CCCD
+    FROM   BENHNHAN;
+
+-- V_HSBA_SUMMARY: thich nghi (them MABS, MAKHOA tu PH2)
+CREATE OR REPLACE VIEW V_HSBA_SUMMARY AS
+    SELECT H.MAHSBA, H.MABN, B.TENBN, H.NGAY,
+           H.CHANDOAN, H.KETLUAN,
+           H.MABS, NV.HOTEN AS TEN_BACSI, H.MAKHOA
+    FROM   HSBA H
+           JOIN BENHNHAN B  ON H.MABN = B.MABN
+           JOIN NHANVIEN  NV ON H.MABS = NV.MANV;
+
+
+-- ============================================================
+-- B8: STORED PROCEDURES NGHIEP VU - THICH NGHI VOI SCHEMA PH2
+-- ============================================================
+
+-- SP_THEM_BENHNHAN: dung schema day du cua PH2
+CREATE OR REPLACE PROCEDURE SP_THEM_BENHNHAN (
+    p_mabn          IN VARCHAR2,
+    p_tenbn         IN NVARCHAR2,
+    p_phai          IN NVARCHAR2,   -- 'Nam' hoac 'Nu'
+    p_ngaysinh      IN DATE,
+    p_cccd          IN VARCHAR2,
+    p_sonha         IN NVARCHAR2,
+    p_tenduong      IN NVARCHAR2,
+    p_quanhuyen     IN NVARCHAR2,
+    p_tinhthanh     IN NVARCHAR2,
+    p_tiensubenh    IN NVARCHAR2 DEFAULT NULL,
+    p_tiensubenhgd  IN NVARCHAR2 DEFAULT NULL,
+    p_diungThuoc    IN NVARCHAR2 DEFAULT NULL,
+    p_oracle_username IN VARCHAR2 DEFAULT NULL
+) AS
+BEGIN
+    INSERT INTO BENHNHAN (
+        MABN, TENBN, PHAI, NGAYSINH, CCCD,
+        SONHA, TENDUONG, QUANHUYEN, TINHTHANH,
+        TIENSUBENH, TIENSUBENHGD, DIUNGthuoc, ORACLE_USERNAME
+    ) VALUES (
+        p_mabn, p_tenbn, p_phai, p_ngaysinh, p_cccd,
+        p_sonha, p_tenduong, p_quanhuyen, p_tinhthanh,
+        p_tiensubenh, p_tiensubenhgd, p_diungThuoc,
+        UPPER(TRIM(p_oracle_username))
+    );
+    COMMIT;
+END SP_THEM_BENHNHAN;
+/
+
+-- SP_CAP_NHAT_HSBA: them kiem soat MABS (bac si chi sua HSBA cua chinh minh)
+-- Luu y: VPD da tu dong loc dong; SP nay them tang bao ve tuong minh
+CREATE OR REPLACE PROCEDURE SP_CAP_NHAT_HSBA (
+    p_mahsba   IN VARCHAR2,
+    p_chandoan IN NVARCHAR2,
+    p_dieutri  IN NVARCHAR2,
+    p_ketluan  IN NVARCHAR2
+) AS
+    v_rows NUMBER;
+BEGIN
+    UPDATE HSBA
+    SET    CHANDOAN = p_chandoan,
+           DIEUTRI  = p_dieutri,
+           KETLUAN  = p_ketluan
+    WHERE  MAHSBA = p_mahsba;
+    -- VPD da loc: neu cap nhat 0 dong, co the la HSBA khong phai cua BS nay
+    v_rows := SQL%ROWCOUNT;
+    IF v_rows = 0 THEN
+        RAISE_APPLICATION_ERROR(-20010,
+            'HSBA khong ton tai hoac ban khong co quyen cap nhat HSBA nay.');
+    END IF;
+    COMMIT;
+END SP_CAP_NHAT_HSBA;
+/
+
+-- FN_DEM_BENHNHAN: khong thay doi
+CREATE OR REPLACE FUNCTION FN_DEM_BENHNHAN
+RETURN NUMBER AS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM BENHNHAN;
+    RETURN v_count;
+END FN_DEM_BENHNHAN;
+/
+
+-- FN_TEN_BENHNHAN: khong thay doi
+CREATE OR REPLACE FUNCTION FN_TEN_BENHNHAN (
+    p_mabn IN VARCHAR2
+) RETURN NVARCHAR2 AS
+    v_ten NVARCHAR2(100);
+BEGIN
+    SELECT TENBN INTO v_ten FROM BENHNHAN WHERE MABN = p_mabn;
+    RETURN v_ten;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN RETURN NULL;
+END FN_TEN_BENHNHAN;
+/
+
+COMMIT;
+
+
+-- ============================================================
+-- B9: KIEM TRA SAU TICH HOP
+-- ============================================================
+
+-- Kiem tra object da tao
+SELECT OBJECT_NAME, OBJECT_TYPE, STATUS
+FROM   USER_OBJECTS
+WHERE  OBJECT_TYPE IN ('TABLE','VIEW','PROCEDURE','FUNCTION','PACKAGE','TYPE')
+ORDER  BY OBJECT_TYPE, OBJECT_NAME;
+
+-- Kiem tra danh sach user ung dung
+SELECT * FROM TABLE(FN_LIST_USERS);
+
+-- Kiem tra danh sach role ung dung
+SELECT * FROM TABLE(FN_LIST_ROLES);
+
+-- Kiem tra quyen doi tuong cua mot role
+SELECT * FROM TABLE(FN_GET_OBJ_PRIVS('RL_BACSI'));
+SELECT * FROM TABLE(FN_GET_ROLE_PRIVS('RL_BACSI'));
+
+
+
+
