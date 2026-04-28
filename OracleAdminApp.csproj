@@ -92,6 +92,12 @@
     <Compile Include="Forms\MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\CoordinatorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\DoctorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Forms\PatientForm.cs">
       <SubType>Form</SubType>
     </Compile>
