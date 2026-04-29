@@ -712,3 +712,242 @@ BEGIN
     END LOOP;
 END;
 /
+
+-- ============================================================
+-- YEU CAU 3: VAN DUNG CO CHE KIEM TOAN 
+-- ============================================================
+
+-- PHAN 1: KIEM TRA VA KICH HOAT AUDIT HE THONG
+-- Chay bang SYS AS SYSDBA
+
+SHOW PARAMETER audit_trail;
+
+-- Neu audit_trail dang la NONE thi bat audit:
+ALTER SYSTEM SET audit_trail = DB, EXTENDED SCOPE = SPFILE;
+
+-- Sau lenh tren can restart database de audit_trail co hieu luc.
+-- Sau khi restart, kiem tra lai:
+SHOW PARAMETER audit_trail;
+
+-- ============================================================
+-- PHAN 2: TAO DOI TUONG MINH HOA CHO AUDIT VIEW / PROCEDURE / FUNCTION
+-- Chay bang schema chu cac bang, vi du ADMIN_HOSPITAL
+-- ============================================================
+
+-- View minh hoa: xem thong tin ho so benh an kem benh nhan
+CREATE OR REPLACE VIEW VW_AUDIT_HSBA_BENHNHAN AS
+SELECT 
+    H.MAHSBA,
+    H.MABN,
+    B.TENBN,
+    H.NGAY,
+    H.CHANDOAN,
+    H.DIEUTRI,
+    H.MABS,
+    H.MAKHOA,
+    H.KETLUAN
+FROM HSBA H
+JOIN BENHNHAN B ON H.MABN = B.MABN;
+
+-- Procedure minh hoa: cap nhat ket qua dich vu
+CREATE OR REPLACE PROCEDURE SP_AUDIT_CAPNHAT_KETQUA_DV (
+    p_mahsba IN HSBA_DV.MAHSBA%TYPE,
+    p_loaidv IN HSBA_DV.LOAIDV%TYPE,
+    p_ngaydv IN HSBA_DV.NGAYDV%TYPE,
+    p_ketqua IN HSBA_DV.KETQUA%TYPE
+)
+AS
+BEGIN
+    UPDATE HSBA_DV
+    SET KETQUA = p_ketqua
+    WHERE MAHSBA = p_mahsba
+      AND LOAIDV = p_loaidv
+      AND NGAYDV = p_ngaydv;
+END;
+/
+
+SHOW ERRORS;
+
+-- Function minh hoa: dem so ho so benh an cua mot bac si
+CREATE OR REPLACE FUNCTION FN_AUDIT_DEM_HSBA_BACSI (
+    p_mabs IN HSBA.MABS%TYPE
+)
+RETURN NUMBER
+AS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM HSBA
+    WHERE MABS = p_mabs;
+
+    RETURN v_count;
+END;
+/
+
+SHOW ERRORS;
+
+-- ============================================================
+-- PHAN 3: CAP QUYEN DE TEST AUDIT
+-- Chay bang schema chu bang hoac DBA
+-- ============================================================
+
+-- Bac si BS_AN test HSBA va DONTHUOC
+GRANT SELECT, UPDATE ON HSBA TO BS_AN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON DONTHUOC TO BS_AN;
+GRANT SELECT ON VW_AUDIT_HSBA_BENHNHAN TO BS_AN;
+GRANT EXECUTE ON FN_AUDIT_DEM_HSBA_BACSI TO BS_AN;
+
+-- Ky thuat vien KTV_NAM test HSBA_DV va procedure
+GRANT SELECT, UPDATE ON HSBA_DV TO KTV_NAM;
+GRANT EXECUTE ON SP_AUDIT_CAPNHAT_KETQUA_DV TO KTV_NAM;
+
+-- Dieu phoi vien DPV_LAN test BENHNHAN
+GRANT SELECT, INSERT, UPDATE ON BENHNHAN TO DPV_LAN;
+
+-- ============================================================
+-- PHAN 4: THIET LAP STANDARD AUDIT
+-- Chay bang schema chu bang hoac DBA
+-- ============================================================
+
+-- Truong hop 1: Audit bac si cap nhat HSBA
+AUDIT UPDATE ON HSBA BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT UPDATE ON HSBA BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+-- Truong hop 2: Audit bac si them/sua/xoa DONTHUOC
+AUDIT INSERT, UPDATE, DELETE ON DONTHUOC BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT INSERT, UPDATE, DELETE ON DONTHUOC BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+-- Truong hop 3: Audit ky thuat vien cap nhat HSBA_DV
+AUDIT UPDATE ON HSBA_DV BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT UPDATE ON HSBA_DV BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+-- Truong hop 4: Audit dieu phoi vien them/sua BENHNHAN
+AUDIT INSERT, UPDATE ON BENHNHAN BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT INSERT, UPDATE ON BENHNHAN BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+-- Truong hop 5a: Audit SELECT tren VIEW
+AUDIT SELECT ON VW_AUDIT_HSBA_BENHNHAN BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT SELECT ON VW_AUDIT_HSBA_BENHNHAN BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+-- Truong hop 5b: Audit EXECUTE tren STORED PROCEDURE
+AUDIT EXECUTE ON SP_AUDIT_CAPNHAT_KETQUA_DV BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT EXECUTE ON SP_AUDIT_CAPNHAT_KETQUA_DV BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+-- Truong hop 5c: Audit EXECUTE tren FUNCTION
+AUDIT EXECUTE ON FN_AUDIT_DEM_HSBA_BACSI BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT EXECUTE ON FN_AUDIT_DEM_HSBA_BACSI BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+
+GRANT CREATE SESSION TO BS_AN;
+GRANT CREATE SESSION TO KTV_NAM;
+GRANT CREATE SESSION TO DPV_LAN;
+
+-- Neu muon test them benh nhan:
+GRANT CREATE SESSION TO BN_ANH;
+
+-- Neu muon tat ca user trong role RL_TC1_USER dang nhap duoc:
+GRANT CREATE SESSION TO RL_TC1_USER;
+
+
+-- ============================================================
+-- 2. CAP QUYEN CHO BAC SI BS_AN
+-- Muc dich: test audit tren HSBA, DONTHUOC, VIEW, FUNCTION
+-- ============================================================
+
+GRANT SELECT ON HSBA TO BS_AN;
+GRANT UPDATE ON HSBA TO BS_AN;
+
+GRANT SELECT ON DONTHUOC TO BS_AN;
+GRANT INSERT ON DONTHUOC TO BS_AN;
+GRANT UPDATE ON DONTHUOC TO BS_AN;
+GRANT DELETE ON DONTHUOC TO BS_AN;
+
+GRANT SELECT ON BENHNHAN TO BS_AN;
+
+GRANT SELECT ON VW_AUDIT_HSBA_BENHNHAN TO BS_AN;
+
+GRANT EXECUTE ON FN_AUDIT_DEM_HSBA_BACSI TO BS_AN;
+
+
+-- ============================================================
+-- 3. CAP QUYEN CHO KY THUAT VIEN KTV_NAM
+-- Muc dich: test audit tren HSBA_DV va STORED PROCEDURE
+-- ============================================================
+
+GRANT SELECT ON HSBA_DV TO KTV_NAM;
+GRANT UPDATE ON HSBA_DV TO KTV_NAM;
+
+GRANT EXECUTE ON SP_AUDIT_CAPNHAT_KETQUA_DV TO KTV_NAM;
+
+
+-- ============================================================
+-- 4. CAP QUYEN CHO DIEU PHOI VIEN DPV_LAN
+-- Muc dich: test audit tren BENHNHAN
+-- ============================================================
+
+GRANT SELECT ON BENHNHAN TO DPV_LAN;
+GRANT INSERT ON BENHNHAN TO DPV_LAN;
+GRANT UPDATE ON BENHNHAN TO DPV_LAN;
+
+-- Co the cap them SELECT HSBA, HSBA_DV neu UI cua ban can hien du lieu lien quan
+GRANT SELECT ON HSBA TO DPV_LAN;
+GRANT SELECT ON HSBA_DV TO DPV_LAN;
+
+
+-- ============================================================
+-- 5. CAP QUYEN DOC AUDIT LOG CHO USER QUAN TRI NEU CAN
+-- Khuyen nghi: doc audit log bang SYS hoac SYSTEM.
+-- Neu app/admin user rieng can doc log, cap SELECT_CATALOG_ROLE.
+-- Vi du: neu co user ADMIN_HOSPITAL thi mo dong duoi.
+-- ============================================================
+
+-- GRANT SELECT_CATALOG_ROLE TO ADMIN_HOSPITAL;
+
+-- Neu muon cap truc tiep quyen xem DBA_AUDIT_TRAIL cho mot user:
+-- GRANT SELECT ON SYS.DBA_AUDIT_TRAIL TO ADMIN_HOSPITAL;
+
+
+-- ============================================================
+-- 6. KIEM TRA QUYEN DA CAP
+-- ============================================================
+
+SELECT GRANTEE, PRIVILEGE
+FROM DBA_SYS_PRIVS
+WHERE GRANTEE IN ('BS_AN', 'KTV_NAM', 'DPV_LAN', 'BN_ANH', 'RL_TC1_USER')
+ORDER BY GRANTEE, PRIVILEGE;
+
+SELECT GRANTEE, OWNER, TABLE_NAME, PRIVILEGE
+FROM DBA_TAB_PRIVS
+WHERE GRANTEE IN ('BS_AN', 'KTV_NAM', 'DPV_LAN')
+ORDER BY GRANTEE, TABLE_NAME, PRIVILEGE;
+
+-- ============================================================
+-- PHAN 5: DOC NHAT KY KIEM TOAN - STANDARD AUDIT
+-- Chay bang SYS, SYSTEM hoac user co quyen SELECT_CATALOG_ROLE
+-- ============================================================
+
+CONNECT sys/2311 AS SYSDBA;
+
+COLUMN USERNAME FORMAT A15
+COLUMN OWNER FORMAT A15
+COLUMN OBJ_NAME FORMAT A30
+COLUMN ACTION_NAME FORMAT A15
+COLUMN STATUS FORMAT A12
+COLUMN SQL_TEXT FORMAT A80
+
+SELECT 
+    USERNAME,
+    OWNER,
+    OBJ_NAME,
+    ACTION_NAME,
+    RETURNCODE,
+    CASE 
+        WHEN RETURNCODE = 0 THEN 'SUCCESS'
+        ELSE 'FAILED'
+    END AS STATUS,
+    TIMESTAMP,
+    SQL_TEXT
+FROM DBA_AUDIT_TRAIL
+WHERE USERNAME IN ('BS_AN', 'KTV_NAM', 'DPV_LAN')
+ORDER BY TIMESTAMP DESC;
