@@ -1,0 +1,40 @@
+-- == CONNECTION 2: BS_AN / Welcome#123 ==
+UPDATE BVDBA.HSBA
+SET    CHANDOAN = N'Viem loet da day - BS_AN cap nhat',
+       KETLUAN  = N'Benh nhan dap ung tot'
+WHERE  MAHSBA = 'HSBA001';
+COMMIT;
+
+UPDATE BVDBA.DONTHUOC
+SET    LIEUDUNG = N'1 vien x 3 lan/ngay (da chinh sua)'
+WHERE  MAHSBA   = 'HSBA001'
+  AND  NGAYDT   = DATE '2024-01-10'
+  AND  TENTHUOC = N'Omeprazole 20mg';
+COMMIT;
+
+
+-- == CONNECTION 3: BS_BAO / Welcome#123 ==
+UPDATE BVDBA.HSBA
+SET    CHANDOAN = N'BS_BAO co tinh sua trai phep'
+WHERE  MAHSBA = 'HSBA001';
+
+
+-- == CONNECTION 4: KTV_NAM / Welcome#123 ==
+INSERT INTO BVDBA.HSBA_DV (MAHSBA, LOAIDV, NGAYDV, MAKTV, KETQUA)
+VALUES ('HSBA001', N'Test trai phep', DATE '2024-05-01', 'KTV01', N'test');
+
+UPDATE BVDBA.HSBA_DV
+SET    KETQUA = N'Ket qua xet nghiem: binh thuong'
+WHERE  MAHSBA  = 'HSBA001'
+  AND  LOAIDV  = N'Xét nghiệm máu tổng quát'
+  AND  NGAYDV  = DATE '2024-01-10';
+COMMIT;
+
+
+-- == CONNECTION 1: BVDBA / BvDba#2026 == doc log sau khi chay xong 3 session tren
+SELECT TO_CHAR(TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS') AS THOI_GIAN,
+       DB_USER, OBJECT_NAME, POLICY_NAME, STATEMENT_TYPE,
+       SUBSTR(SQL_TEXT, 1, 200) AS NOI_DUNG_SQL
+FROM DBA_FGA_AUDIT_TRAIL
+WHERE OBJECT_SCHEMA = 'BVDBA'
+ORDER BY TIMESTAMP DESC;

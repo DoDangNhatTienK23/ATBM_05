@@ -878,7 +878,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
         v_manv   VARCHAR2(10);
         v_vaitro NVARCHAR2(50);
     BEGIN
-        v_user := SYS_CONTEXT('USERENV', 'SESSION_USER');
+        v_user := UPPER(SYS_CONTEXT('USERENV', 'SESSION_USER'));
 
         BEGIN
             SELECT MANV, VAITRO
@@ -890,18 +890,17 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
             DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', v_vaitro);
         EXCEPTION
             WHEN NO_DATA_FOUND THEN
-                DBMS_SESSION.CLEAR_CONTEXT('HOSPITAL_CTX', 'MANV');
-                DBMS_SESSION.CLEAR_CONTEXT('HOSPITAL_CTX', 'VAITRO');
+                DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', NULL);
+                DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', NULL);
         END;
     END set_ctx;
 
     FUNCTION vpd_predicate(p_schema VARCHAR2, p_obj VARCHAR2)
         RETURN VARCHAR2
     IS
-        v_role NVARCHAR2(50) := SYS_CONTEXT('HOSPITAL_CTX', 'VAITRO');
-        v_manv VARCHAR2(10)  := SYS_CONTEXT('HOSPITAL_CTX', 'MANV');
-        v_user VARCHAR2(30)  := SYS_CONTEXT('USERENV', 'SESSION_USER');
-        v_stmt VARCHAR2(10)  := SYS_CONTEXT('USERENV', 'STATEMENT_TYPE');
+        v_role NVARCHAR2(50) := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'VAITRO')));
+        v_manv VARCHAR2(10)  := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'MANV')));
+        v_user VARCHAR2(30)  := UPPER(SYS_CONTEXT('USERENV', 'SESSION_USER'));
     BEGIN
         IF SYS_CONTEXT('USERENV', 'ISDBA') = 'TRUE'
            OR v_user IN ('SYS', 'SYSTEM') THEN
@@ -914,63 +913,38 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
 
         CASE UPPER(p_obj)
             WHEN 'BENHNHAN' THEN
-                IF v_role = 'Dieu phoi vien' THEN
+                IF v_role = 'DIEU PHOI VIEN' THEN
                     RETURN '1=1';
-                ELSIF v_role = 'Bac si/Y si' THEN
-                    IF v_stmt IN ('SELECT', 'UPDATE') THEN
-                        RETURN 'EXISTS (SELECT 1 FROM HSBA H ' ||
-                               'WHERE H.MABN = BENHNHAN.MABN ' ||
-                               'AND H.MABS = ''' || v_manv || ''')';
-                    ELSE
-                        RETURN '1=0';
-                    END IF;
+                ELSIF v_role = 'BAC SI/Y SI' THEN
+                    RETURN 'EXISTS (SELECT 1 FROM HSBA H ' ||
+                           'WHERE H.MABN = BENHNHAN.MABN ' ||
+                           'AND H.MABS = ''' || v_manv || ''')';
                 ELSE
                     RETURN '1=0';
                 END IF;
 
             WHEN 'HSBA' THEN
-                IF v_role = 'Dieu phoi vien' THEN
-                    IF v_stmt IN ('SELECT', 'INSERT', 'UPDATE') THEN
-                        RETURN '1=1';
-                    ELSE
-                        RETURN '1=0';
-                    END IF;
-                ELSIF v_role = 'Bac si/Y si' THEN
-                    IF v_stmt IN ('SELECT', 'UPDATE') THEN
-                        RETURN 'MABS = ''' || v_manv || '''';
-                    ELSE
-                        RETURN '1=0';
-                    END IF;
-                ELSE
-                    RETURN '1=0';
+                IF v_role = 'DIEU PHOI VIEN' THEN
+                    RETURN '1=1';
+                ELSIF v_role = 'BAC SI/Y SI' THEN
+                    RETURN 'MABS = ''' || v_manv || '''';
                 END IF;
+                RETURN '1=0';
 
             WHEN 'HSBA_DV' THEN
-                IF v_role = 'Dieu phoi vien' THEN
-                    IF v_stmt IN ('SELECT', 'UPDATE') THEN
-                        RETURN '1=1';
-                    ELSE
-                        RETURN '1=0';
-                    END IF;
-                ELSIF v_role = 'Bac si/Y si' THEN
-                    IF v_stmt IN ('SELECT', 'INSERT', 'DELETE') THEN
-                        RETURN 'MAHSBA IN (SELECT MAHSBA FROM HSBA ' ||
-                               'WHERE MABS = ''' || v_manv || ''')';
-                    ELSE
-                        RETURN '1=0';
-                    END IF;
+                IF v_role = 'DIEU PHOI VIEN' THEN
+                    RETURN '1=1';
+                ELSIF v_role = 'BAC SI/Y SI' THEN
+                    RETURN 'MAHSBA IN (SELECT MAHSBA FROM HSBA ' ||
+                           'WHERE MABS = ''' || v_manv || ''')';
                 ELSE
                     RETURN '1=0';
                 END IF;
 
             WHEN 'DONTHUOC' THEN
-                IF v_role = 'Bac si/Y si' THEN
-                    IF v_stmt IN ('SELECT', 'INSERT', 'UPDATE', 'DELETE') THEN
-                        RETURN 'MAHSBA IN (SELECT MAHSBA FROM HSBA ' ||
-                               'WHERE MABS = ''' || v_manv || ''')';
-                    ELSE
-                        RETURN '1=0';
-                    END IF;
+                IF v_role = 'BAC SI/Y SI' THEN
+                    RETURN 'MAHSBA IN (SELECT MAHSBA FROM HSBA ' ||
+                           'WHERE MABS = ''' || v_manv || ''')';
                 ELSE
                     RETURN '1=0';
                 END IF;
@@ -1683,5 +1657,165 @@ SELECT * FROM TABLE(FN_GET_OBJ_PRIVS('RL_BACSI'));
 SELECT * FROM TABLE(FN_GET_ROLE_PRIVS('RL_BACSI'));
 
 
+-- ============================================================
+-- YEU CAU 3 - CAU 3 + CAU 4: FGA + STANDARD AUDIT
+-- Chay voi session BVDBA
+-- ============================================================
 
+-- ---- BUOC 1: XOA POLICY CU (1 block duy nhat) ----
+BEGIN
+    BEGIN DBMS_FGA.DROP_POLICY(USER, 'DONTHUOC', 'FGA_DT_UPDATE_AFTER_CREATE');  EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DBMS_FGA.DROP_POLICY(USER, 'HSBA',     'FGA_HSBA_BS_UPDATE');          EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DBMS_FGA.DROP_POLICY(USER, 'HSBA',     'FGA_HSBA_ILLEGAL_UPDATE');     EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DBMS_FGA.DROP_POLICY(USER, 'HSBA_DV',  'FGA_HSBA_DV_ILLEGAL_DML');    EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DBMS_FGA.DROP_POLICY(USER, 'HSBA_DV',  'FGA_HSBA_DV_KTV_UPDATE');     EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DBMS_FGA.DROP_POLICY(USER, 'HSBA_DV',  'AUDIT_KTV_UPDATE_KETQUA');    EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DBMS_FGA.DROP_POLICY(USER, 'HSBA',     'FGA_HSBA_DOCTOR_UPDATE');     EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DBMS_FGA.DROP_POLICY(USER, 'DONTHUOC', 'FGA_DONTHUOC_DOCTOR_UPDATE'); EXCEPTION WHEN OTHERS THEN NULL; END;
+END;
+/
+
+-- ---- BUOC 2: TAO FGA POLICY MOI (1 block duy nhat) ----
+BEGIN
+    -- (a) Ghi vet UPDATE don thuoc sau khi da tao (TC#3e)
+    DBMS_FGA.ADD_POLICY(
+        object_schema   => USER,
+        object_name     => 'DONTHUOC',
+        policy_name     => 'FGA_DT_UPDATE_AFTER_CREATE',
+        audit_column    => 'TENTHUOC,LIEUDUNG',
+        statement_types => 'UPDATE',
+        enable          => TRUE
+    );
+
+    -- (b) Ghi vet UPDATE THANH CONG cua Bac si/Y si tren HSBA (TC#3c)
+    DBMS_FGA.ADD_POLICY(
+        object_schema   => USER,
+        object_name     => 'HSBA',
+        policy_name     => 'FGA_HSBA_BS_UPDATE',
+        audit_column    => 'CHANDOAN,DIEUTRI,KETLUAN',
+        statement_types => 'UPDATE',
+        enable          => TRUE
+    );
+
+    -- (c)+(d) Ghi vet moi DML tren HSBA_DV (bao gom ca bat hop phap)
+    DBMS_FGA.ADD_POLICY(
+        object_schema   => USER,
+        object_name     => 'HSBA_DV',
+        policy_name     => 'FGA_HSBA_DV_ILLEGAL_DML',
+        audit_column    => 'MAKTV,KETQUA,LOAIDV,MAHSBA',
+        statement_types => 'INSERT,UPDATE,DELETE',
+        enable          => TRUE
+    );
+END;
+/
+
+-- ---- BUOC 3: STANDARD AUDIT (plain SQL, khong can /) ----
+
+-- Xoa audit cu
+NOAUDIT SELECT  ON BVDBA.HSBA;
+NOAUDIT UPDATE  ON BVDBA.HSBA;
+NOAUDIT INSERT  ON BVDBA.HSBA_DV;
+NOAUDIT UPDATE  ON BVDBA.HSBA_DV;
+NOAUDIT DELETE  ON BVDBA.HSBA_DV;
+NOAUDIT UPDATE  ON BVDBA.DONTHUOC;
+NOAUDIT EXECUTE ON BVDBA.SP_CAP_NHAT_HSBA;
+NOAUDIT SELECT  ON BVDBA.VW_BN_THONGTIN_CANHAN;
+NOAUDIT EXECUTE ON BVDBA.SP_THEM_BENHNHAN;
+
+-- Ngu canh 1: Doc HSBA
+AUDIT SELECT ON BVDBA.HSBA BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT SELECT ON BVDBA.HSBA BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+-- Ngu canh 2: Sua HSBA (bao phu TC#3c - bat hop phap)
+AUDIT UPDATE ON BVDBA.HSBA BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT UPDATE ON BVDBA.HSBA BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+-- Ngu canh 3: DML bat hop phap tren HSBA_DV (TC#3d)
+AUDIT INSERT ON BVDBA.HSBA_DV BY ACCESS WHENEVER NOT SUCCESSFUL;
+AUDIT UPDATE ON BVDBA.HSBA_DV BY ACCESS WHENEVER NOT SUCCESSFUL;
+AUDIT DELETE ON BVDBA.HSBA_DV BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+-- Ngu canh 4: Stored Procedure cap nhat HSBA
+AUDIT EXECUTE ON BVDBA.SP_CAP_NHAT_HSBA BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT EXECUTE ON BVDBA.SP_CAP_NHAT_HSBA BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+-- Ngu canh 5: Benh nhan xem thong tin ca nhan
+AUDIT SELECT ON BVDBA.VW_BN_THONGTIN_CANHAN BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT SELECT ON BVDBA.VW_BN_THONGTIN_CANHAN BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+COMMIT;
+
+
+-- [1] FGA: toan bo hanh vi
+SELECT
+    TO_CHAR(TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS') AS THOI_GIAN,
+    DB_USER                                       AS NGUOI_DUNG,
+    OBJECT_SCHEMA || '.' || OBJECT_NAME           AS DOI_TUONG,
+    POLICY_NAME,
+    STATEMENT_TYPE                                AS HANH_VI,
+    SCN,
+    SUBSTR(SQL_TEXT, 1, 200)                      AS NOI_DUNG_SQL
+FROM DBA_FGA_AUDIT_TRAIL
+WHERE OBJECT_SCHEMA = 'BVDBA'
+ORDER BY TIMESTAMP DESC;
+
+-- [2] Standard Audit: toan bo
+SELECT
+    TO_CHAR(TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')  AS THOI_GIAN,
+    USERNAME                                       AS NGUOI_DUNG,
+    OWNER || '.' || OBJ_NAME                       AS DOI_TUONG,
+    ACTION_NAME                                    AS HANH_VI,
+    CASE WHEN RETURNCODE = 0
+         THEN 'THANH CONG'
+         ELSE 'THAT BAI (ORA-' || RETURNCODE || ')'
+    END                                            AS KET_QUA,
+    SUBSTR(SQL_TEXT, 1, 200)                       AS NOI_DUNG_SQL
+FROM DBA_AUDIT_TRAIL
+WHERE OWNER = 'BVDBA'
+ORDER BY TIMESTAMP DESC;
+
+-- [3] Chi hanh vi THAT BAI
+SELECT
+    TO_CHAR(TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')  AS THOI_GIAN,
+    USERNAME                                       AS NGUOI_DUNG,
+    OWNER || '.' || OBJ_NAME                       AS DOI_TUONG,
+    ACTION_NAME                                    AS HANH_VI,
+    RETURNCODE                                     AS MA_LOI,
+    SUBSTR(SQL_TEXT, 1, 200)                       AS NOI_DUNG_SQL
+FROM DBA_AUDIT_TRAIL
+WHERE OWNER      = 'BVDBA'
+  AND RETURNCODE != 0
+ORDER BY TIMESTAMP DESC;
+
+-- [4] FGA: UPDATE tren HSBA
+SELECT
+    TO_CHAR(TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')  AS THOI_GIAN,
+    DB_USER                                        AS NGUOI_DUNG,
+    POLICY_NAME,
+    SUBSTR(SQL_TEXT, 1, 300)                       AS NOI_DUNG_SQL
+FROM DBA_FGA_AUDIT_TRAIL
+WHERE OBJECT_SCHEMA  = 'BVDBA'
+  AND OBJECT_NAME    = 'HSBA'
+  AND STATEMENT_TYPE = 'UPDATE'
+ORDER BY TIMESTAMP DESC;
+
+-- [5] Thong ke tong hop
+SELECT
+    NGUOI_DUNG,
+    DOI_TUONG,
+    HANH_VI,
+    COUNT(*)                                      AS TONG,
+    SUM(CASE WHEN MA_LOI = 0  THEN 1 ELSE 0 END) AS THANH_CONG,
+    SUM(CASE WHEN MA_LOI != 0 THEN 1 ELSE 0 END) AS THAT_BAI
+FROM (
+    SELECT
+        USERNAME                  AS NGUOI_DUNG,
+        OWNER || '.' || OBJ_NAME  AS DOI_TUONG,
+        ACTION_NAME               AS HANH_VI,
+        RETURNCODE                AS MA_LOI
+    FROM DBA_AUDIT_TRAIL
+    WHERE OWNER = 'BVDBA'
+)
+GROUP BY NGUOI_DUNG, DOI_TUONG, HANH_VI
+ORDER BY NGUOI_DUNG, DOI_TUONG;
 
