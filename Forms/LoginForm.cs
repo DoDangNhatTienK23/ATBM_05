@@ -246,10 +246,22 @@ namespace OracleAdminApp.Forms
                             var ktvForm = new TechnicianForm(connStr, upperUsername);
                             ktvForm.Show();
                         }
+                        else if (userRole == "Dieu phoi vien")
+                        {
+                            // 4. Giao dien Dieu phoi vien (TC#2)
+                            var coordinatorForm = new CoordinatorForm(connStr, upperUsername);
+                            coordinatorForm.Show();
+                        }
+                        else if (userRole == "Bac si/Y si")
+                        {
+                            // 5. Giao dien Bac si / Y si (TC#3)
+                            var doctorForm = new DoctorForm(connStr, upperUsername);
+                            doctorForm.Show();
+                        }
                         else
                         {
-                            MessageBox.Show($"Đăng nhập thành công nhưng chưa có giao diện cho vai trò: {userRole}");
-                            return; // Tạm dừng không ẩn LoginForm
+                            MessageBox.Show($"Dang nhap thanh cong nhung chua co giao dien cho vai tro: {userRole}");
+                            return; // Tam dung khong an LoginForm
                         }
 
                         this.Hide(); // Ẩn màn hình đăng nhập
