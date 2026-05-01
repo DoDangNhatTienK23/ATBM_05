@@ -937,6 +937,8 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
                 ELSIF v_role = 'BAC SI/Y SI' THEN
                     RETURN 'MAHSBA IN (SELECT MAHSBA FROM HSBA ' ||
                            'WHERE MABS = ''' || v_manv || ''')';
+                ELSIF v_role = 'KY THUAT VIEN' THEN      -- BỔ SUNG QUYỀN CHO KTV
+                    RETURN 'MAKTV = ''' || v_manv || '''';
                 ELSE
                     RETURN '1=0';
                 END IF;
@@ -958,6 +960,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
     END vpd_predicate;
 END PKG_VPD_HOSPITAL;
 /
+
 
 BEGIN
     EXECUTE IMMEDIATE 'DROP CONTEXT HOSPITAL_CTX';
@@ -1819,3 +1822,466 @@ FROM (
 GROUP BY NGUOI_DUNG, DOI_TUONG, HANH_VI
 ORDER BY NGUOI_DUNG, DOI_TUONG;
 
+-- ============================================================
+-- YEU CAU 3 - BLOCK 1
+-- KIEM TRA / KICH HOAT STANDARD AUDIT
+-- Chay bang: SYS AS SYSDBA
+-- ============================================================
+
+ALTER SESSION SET CONTAINER = XEPDB1;
+
+SHOW CON_NAME;
+SHOW PARAMETER audit_trail;
+
+
+
+-- Cap quyen doc audit log cho BVDBA neu can doc log bang BVDBA
+GRANT SELECT_CATALOG_ROLE TO BVDBA;
+GRANT SELECT ON SYS.DBA_AUDIT_TRAIL TO BVDBA;
+
+COMMIT;
+
+SELECT TABLE_NAME
+FROM USER_TABLES
+WHERE TABLE_NAME IN ('BENHNHAN', 'HSBA', 'HSBA_DV', 'DONTHUOC', 'NHANVIEN')
+ORDER BY TABLE_NAME;
+
+
+-- ============================================================
+-- NGU CANH 1
+-- Bac si cap nhat CHANDOAN, DIEUTRI, KETLUAN cua HSBA minh phu trach
+-- ============================================================
+
+-- ============================================================
+-- B2. TAO VIEW CHO NGU CANH 4
+-- Bac si xem danh sach benh nhan lien quan den HSBA
+-- ============================================================
+
+CREATE OR REPLACE VIEW VW_AUDIT_BENHNHAN_LIENQUAN AS
+SELECT 
+    H.MAHSBA,
+    H.MABS,
+    H.MABN,
+    B.TENBN,
+    B.NGAYSINH,
+    B.PHAI,
+    H.CHANDOAN,
+    H.DIEUTRI,
+    H.KETLUAN
+FROM HSBA H
+JOIN BENHNHAN B 
+    ON H.MABN = B.MABN;
+/
+
+SHOW ERRORS VIEW VW_AUDIT_BENHNHAN_LIENQUAN;
+
+
+-- ============================================================
+-- B3. TAO FUNCTION CHO NGU CANH 5
+-- Dem so HSBA cua mot bac si
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION FN_AUDIT_DEM_HSBA_BACSI (
+    p_mabs IN VARCHAR2
+)
+RETURN NUMBER
+AS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM HSBA
+    WHERE MABS = p_mabs;
+
+    RETURN v_count;
+END;
+/
+
+SHOW ERRORS FUNCTION FN_AUDIT_DEM_HSBA_BACSI;
+
+
+-- ============================================================
+-- B4. DAM BAO CAC ROLE CO QUYEN DANG NHAP
+-- ============================================================
+
+GRANT CREATE SESSION TO RL_BACSI;
+GRANT CREATE SESSION TO RL_DIEUPHOIVIEN;
+GRANT CREATE SESSION TO RL_KYTHUATVIEN;
+
+
+-- ============================================================
+-- B5. GRANT QUYEN THEO ROLE CHO 5 NGU CANH AUDIT
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- Ngu canh 1:
+-- Bac si cap nhat HSBA thong qua stored procedure
+-- Object: HSBA table + SP_CAP_NHAT_HSBA procedure
+-- Role: RL_BACSI
+-- ------------------------------------------------------------
+
+GRANT SELECT ON HSBA TO RL_BACSI;
+GRANT UPDATE (CHANDOAN, DIEUTRI, KETLUAN) ON HSBA TO RL_BACSI;
+GRANT EXECUTE ON SP_CAP_NHAT_HSBA TO RL_BACSI;
+
+
+-- ------------------------------------------------------------
+-- Ngu canh 2:
+-- Dieu phoi vien INSERT/UPDATE thong tin BENHNHAN
+-- Object: BENHNHAN table
+-- Role: RL_DIEUPHOIVIEN
+-- ------------------------------------------------------------
+
+GRANT SELECT ON BENHNHAN TO RL_DIEUPHOIVIEN;
+GRANT INSERT ON BENHNHAN TO RL_DIEUPHOIVIEN;
+GRANT UPDATE ON BENHNHAN TO RL_DIEUPHOIVIEN;
+
+
+-- ------------------------------------------------------------
+-- Ngu canh 3:
+-- Ky thuat vien UPDATE ket qua dich vu ho tro chan doan
+-- Object: HSBA_DV table
+-- Role: RL_KYTHUATVIEN
+-- ------------------------------------------------------------
+
+GRANT SELECT ON HSBA_DV TO RL_KYTHUATVIEN;
+GRANT UPDATE (KETQUA) ON HSBA_DV TO RL_KYTHUATVIEN;
+
+
+-- ------------------------------------------------------------
+-- Ngu canh 4:
+-- Bac si SELECT view danh sach benh nhan lien quan
+-- Object: VW_AUDIT_BENHNHAN_LIENQUAN view
+-- Role: RL_BACSI
+-- ------------------------------------------------------------
+
+GRANT SELECT ON VW_AUDIT_BENHNHAN_LIENQUAN TO RL_BACSI;
+
+
+-- ------------------------------------------------------------
+-- Ngu canh 5:
+-- Bac si EXECUTE function thong ke so HSBA
+-- Object: FN_AUDIT_DEM_HSBA_BACSI function
+-- Role: RL_BACSI
+-- ------------------------------------------------------------
+
+GRANT EXECUTE ON FN_AUDIT_DEM_HSBA_BACSI TO RL_BACSI;
+
+
+-- ============================================================
+-- B6. GAN ROLE CHO TOAN BO USER THEO VAI TRO
+-- Chay lai de dam bao user nao cung co role dung
+-- ============================================================
+
+BEGIN
+    -- Gan role Dieu phoi vien
+    FOR r IN (
+        SELECT ORACLE_USERNAME
+        FROM NHANVIEN
+        WHERE VAITRO = N'Dieu phoi vien'
+          AND ORACLE_USERNAME IS NOT NULL
+    ) LOOP
+        EXECUTE IMMEDIATE 'GRANT RL_DIEUPHOIVIEN TO ' || r.ORACLE_USERNAME;
+    END LOOP;
+
+    -- Gan role Bac si/Y si
+    FOR r IN (
+        SELECT ORACLE_USERNAME
+        FROM NHANVIEN
+        WHERE VAITRO = N'Bac si/Y si'
+          AND ORACLE_USERNAME IS NOT NULL
+    ) LOOP
+        EXECUTE IMMEDIATE 'GRANT RL_BACSI TO ' || r.ORACLE_USERNAME;
+    END LOOP;
+
+    -- Gan role Ky thuat vien
+    FOR r IN (
+        SELECT ORACLE_USERNAME
+        FROM NHANVIEN
+        WHERE VAITRO = N'Ky thuat vien'
+          AND ORACLE_USERNAME IS NOT NULL
+    ) LOOP
+        EXECUTE IMMEDIATE 'GRANT RL_KYTHUATVIEN TO ' || r.ORACLE_USERNAME;
+    END LOOP;
+END;
+/
+
+COMMIT;
+
+
+-- ============================================================
+-- B7. STANDARD AUDIT - THIET LAP 5 NGU CANH
+-- Co audit ca thanh cong va khong thanh cong
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- Ngu canh 1:
+-- Bac si cap nhat HSBA va goi stored procedure SP_CAP_NHAT_HSBA
+-- ------------------------------------------------------------
+
+AUDIT UPDATE ON HSBA BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT UPDATE ON HSBA BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+AUDIT EXECUTE ON SP_CAP_NHAT_HSBA BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT EXECUTE ON SP_CAP_NHAT_HSBA BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+
+-- ------------------------------------------------------------
+-- Ngu canh 2:
+-- Dieu phoi vien INSERT/UPDATE BENHNHAN
+-- ------------------------------------------------------------
+
+AUDIT INSERT, UPDATE ON BENHNHAN BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT INSERT, UPDATE ON BENHNHAN BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+-- Them DELETE NOT SUCCESSFUL de co test that bai ro rang
+AUDIT DELETE ON BENHNHAN BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+
+-- ------------------------------------------------------------
+-- Ngu canh 3:
+-- Ky thuat vien UPDATE HSBA_DV.KETQUA
+-- ------------------------------------------------------------
+
+AUDIT UPDATE ON HSBA_DV BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT UPDATE ON HSBA_DV BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+
+-- ------------------------------------------------------------
+-- Ngu canh 4:
+-- Bac si SELECT view danh sach benh nhan lien quan
+-- ------------------------------------------------------------
+
+AUDIT SELECT ON VW_AUDIT_BENHNHAN_LIENQUAN BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT SELECT ON VW_AUDIT_BENHNHAN_LIENQUAN BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+
+-- ------------------------------------------------------------
+-- Ngu canh 5:
+-- Bac si EXECUTE function thong ke so HSBA
+-- ------------------------------------------------------------
+
+AUDIT EXECUTE ON FN_AUDIT_DEM_HSBA_BACSI BY ACCESS WHENEVER SUCCESSFUL;
+AUDIT EXECUTE ON FN_AUDIT_DEM_HSBA_BACSI BY ACCESS WHENEVER NOT SUCCESSFUL;
+
+
+-- ============================================================
+-- B8. KIEM TRA CAC AUDIT OPTION DA BAT
+-- ============================================================
+
+COLUMN OWNER FORMAT A15
+COLUMN OBJECT_NAME FORMAT A40
+COLUMN OBJECT_TYPE FORMAT A15
+COLUMN SEL FORMAT A6
+COLUMN INS FORMAT A6
+COLUMN UPD FORMAT A6
+COLUMN DEL FORMAT A6
+COLUMN EXE FORMAT A6
+
+SELECT 
+    OWNER,
+    OBJECT_NAME,
+    OBJECT_TYPE,
+    SEL,
+    INS,
+    UPD,
+    DEL,
+    EXE
+FROM DBA_OBJ_AUDIT_OPTS
+WHERE OWNER = 'BVDBA'
+  AND OBJECT_NAME IN (
+      'HSBA',
+      'SP_CAP_NHAT_HSBA',
+      'BENHNHAN',
+      'HSBA_DV',
+      'VW_AUDIT_BENHNHAN_LIENQUAN',
+      'FN_AUDIT_DEM_HSBA_BACSI'
+  )
+ORDER BY OBJECT_NAME;
+
+
+-- ============================================================
+-- B9. KIEM TRA QUYEN DA GRANT CHO ROLE
+-- ============================================================
+
+SELECT 
+    GRANTEE,
+    OWNER,
+    TABLE_NAME,
+    PRIVILEGE
+FROM DBA_TAB_PRIVS
+WHERE OWNER = 'BVDBA'
+  AND GRANTEE IN ('RL_BACSI', 'RL_DIEUPHOIVIEN', 'RL_KYTHUATVIEN')
+  AND TABLE_NAME IN (
+      'HSBA',
+      'SP_CAP_NHAT_HSBA',
+      'BENHNHAN',
+      'HSBA_DV',
+      'VW_AUDIT_BENHNHAN_LIENQUAN',
+      'FN_AUDIT_DEM_HSBA_BACSI'
+  )
+ORDER BY GRANTEE, TABLE_NAME, PRIVILEGE;
+
+CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
+
+    PROCEDURE set_ctx IS
+        v_user   VARCHAR2(30);
+        v_manv   VARCHAR2(10);
+        v_vaitro NVARCHAR2(50);
+    BEGIN
+        v_user := UPPER(SYS_CONTEXT('USERENV', 'SESSION_USER'));
+
+        BEGIN
+            SELECT MANV, VAITRO
+            INTO v_manv, v_vaitro
+            FROM BVDBA.NHANVIEN
+            WHERE ORACLE_USERNAME = v_user;
+
+            DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', v_manv);
+            DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', v_vaitro);
+
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', NULL);
+                DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', NULL);
+        END;
+    END set_ctx;
+
+
+    FUNCTION vpd_predicate(
+        p_schema VARCHAR2,
+        p_obj    VARCHAR2
+    )
+    RETURN VARCHAR2
+    IS
+        v_user   VARCHAR2(30);
+        v_manv   VARCHAR2(10);
+        v_vaitro NVARCHAR2(50);
+    BEGIN
+        v_user := UPPER(SYS_CONTEXT('USERENV', 'SESSION_USER'));
+
+        -- User quan tri / DBA duoc xem toan bo
+        IF SYS_CONTEXT('USERENV', 'ISDBA') = 'TRUE'
+           OR v_user IN ('SYS', 'SYSTEM', 'BVDBA') THEN
+            RETURN '1=1';
+        END IF;
+
+        -- Lay thong tin user nghiep vu.
+        -- Uu tien context, neu context rong thi tra truc tiep NHANVIEN.
+        v_manv   := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'MANV')));
+        v_vaitro := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'VAITRO')));
+
+        IF v_manv IS NULL OR v_vaitro IS NULL THEN
+            BEGIN
+                SELECT MANV, VAITRO
+                INTO v_manv, v_vaitro
+                FROM BVDBA.NHANVIEN
+                WHERE ORACLE_USERNAME = v_user;
+
+                v_manv   := UPPER(TRIM(v_manv));
+                v_vaitro := UPPER(TRIM(v_vaitro));
+            EXCEPTION
+                WHEN NO_DATA_FOUND THEN
+                    RETURN '1=0';
+            END;
+        END IF;
+
+        CASE UPPER(p_obj)
+
+            WHEN 'HSBA' THEN
+                IF v_vaitro = 'DIEU PHOI VIEN' THEN
+                    RETURN '1=1';
+
+                ELSIF v_vaitro = 'BAC SI/Y SI' THEN
+                    RETURN 'MABS = ''' || v_manv || '''';
+
+                ELSE
+                    RETURN '1=0';
+                END IF;
+
+
+            WHEN 'BENHNHAN' THEN
+                IF v_vaitro = 'DIEU PHOI VIEN' THEN
+                    RETURN '1=1';
+
+                ELSIF v_vaitro = 'BAC SI/Y SI' THEN
+                    RETURN 'EXISTS (SELECT 1 FROM BVDBA.HSBA H ' ||
+                           'WHERE H.MABN = BENHNHAN.MABN ' ||
+                           'AND H.MABS = ''' || v_manv || ''')';
+
+                ELSE
+                    RETURN '1=0';
+                END IF;
+
+
+            WHEN 'HSBA_DV' THEN
+                IF v_vaitro = 'DIEU PHOI VIEN' THEN
+                    RETURN '1=1';
+
+                ELSIF v_vaitro = 'BAC SI/Y SI' THEN
+                    RETURN 'MAHSBA IN (SELECT H.MAHSBA FROM BVDBA.HSBA H ' ||
+                           'WHERE H.MABS = ''' || v_manv || ''')';
+
+                ELSE
+                    RETURN '1=0';
+                END IF;
+
+
+            WHEN 'DONTHUOC' THEN
+                IF v_vaitro = 'BAC SI/Y SI' THEN
+                    RETURN 'MAHSBA IN (SELECT H.MAHSBA FROM BVDBA.HSBA H ' ||
+                           'WHERE H.MABS = ''' || v_manv || ''')';
+
+                ELSE
+                    RETURN '1=0';
+                END IF;
+
+
+            ELSE
+                RETURN '1=0';
+        END CASE;
+
+    EXCEPTION
+        WHEN OTHERS THEN
+            RETURN '1=0';
+    END vpd_predicate;
+
+END PKG_VPD_HOSPITAL;
+/
+
+SHOW ERRORS PACKAGE BODY PKG_VPD_HOSPITAL;
+
+
+-- đọc Standard audit
+SELECT 
+    TO_CHAR(TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS') AS THOI_GIAN,
+    USERNAME AS USER_THUC_HIEN,
+    OWNER AS OBJECT_SCHEMA,
+    OBJ_NAME AS OBJECT_NAME,
+    ACTION_NAME AS LOAI_HANH_VI,
+    RETURNCODE,
+    CASE 
+        WHEN RETURNCODE = 0 THEN 'SUCCESS'
+        ELSE 'FAILED'
+    END AS KET_QUA,
+    CASE
+        WHEN OBJ_NAME = 'HSBA' THEN 'Bac si cap nhat HSBA'
+        WHEN OBJ_NAME = 'SP_CAP_NHAT_HSBA' THEN 'Bac si goi procedure cap nhat HSBA'
+        WHEN OBJ_NAME = 'BENHNHAN' THEN 'Dieu phoi vien thao tac BENHNHAN'
+        WHEN OBJ_NAME = 'HSBA_DV' THEN 'Ky thuat vien cap nhat HSBA_DV'
+        WHEN OBJ_NAME = 'VW_AUDIT_BENHNHAN_LIENQUAN' THEN 'Bac si SELECT view'
+        WHEN OBJ_NAME = 'FN_AUDIT_DEM_HSBA_BACSI' THEN 'Bac si EXECUTE function'
+        ELSE 'Khac'
+    END AS KIEM_CHUNG_DA_LAM_GI,
+    SUBSTR(SQL_TEXT, 1, 200) AS NOI_DUNG_SQL
+FROM DBA_AUDIT_TRAIL
+WHERE OWNER = 'BVDBA'
+  AND OBJ_NAME IN (
+      'HSBA',
+      'SP_CAP_NHAT_HSBA',
+      'BENHNHAN',
+      'HSBA_DV',
+      'VW_AUDIT_BENHNHAN_LIENQUAN',
+      'FN_AUDIT_DEM_HSBA_BACSI'
+  )
+ORDER BY TIMESTAMP DESC;
