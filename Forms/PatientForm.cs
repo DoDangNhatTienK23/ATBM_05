@@ -16,7 +16,7 @@ namespace OracleAdminApp.Forms
         private TextBox txtMaBN, txtTenBN, txtPhai, txtNgaySinh, txtCCCD;
         private TextBox txtSoNha, txtTenDuong, txtQuanHuyen, txtTinhTP;
         private TextBox txtTienSu, txtTienSuGD, txtDiUng;
-        private Button btnUpdate, btnLogout;
+        private Button btnUpdate, btnLogout, btnThongBao;
         private Label lblStatus;
 
         public PatientForm(string connStr, string username)
@@ -73,6 +73,22 @@ namespace OracleAdminApp.Forms
             btnLogout.Location = new Point(20, 550);
             btnLogout.Click += (s, e) => { this.Close(); new LoginForm().Show(); };
             this.Controls.Add(btnLogout);
+
+            btnThongBao = UIHelper.CreateButton("Xem thong bao", ButtonStyle.Primary);
+            btnThongBao.Location = new Point(230, 550);
+            btnThongBao.Size = new Size(180, 40);
+            btnThongBao.Click += (s, e) =>
+            {
+                var f = new Form
+                {
+                    Text = "Thong bao - " + _username,
+                    Size = new Size(950, 550),
+                    StartPosition = FormStartPosition.CenterParent
+                };
+                f.Controls.Add(new ThongBaoPanel(_connStr));
+                f.ShowDialog();
+            };
+            this.Controls.Add(btnThongBao);
 
             lblStatus = new Label { Location = new Point(230, 560), Size = new Size(320, 25), Font = new Font("Segoe UI", 9f) };
             this.Controls.Add(lblStatus);
