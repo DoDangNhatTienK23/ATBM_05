@@ -107,6 +107,9 @@
     <Compile Include="Forms\RoleManagementPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="Forms\ThongBaoPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Forms\TechnicianForm.cs">
       <SubType>Form</SubType>
     </Compile>
