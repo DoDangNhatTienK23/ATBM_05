@@ -880,6 +880,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
     PROCEDURE set_ctx IS
         v_user   VARCHAR2(30);
         v_manv   VARCHAR2(10);
+        v_mabn   VARCHAR2(10);
         v_vaitro NVARCHAR2(50);
     BEGIN
         v_user := UPPER(SYS_CONTEXT('USERENV', 'SESSION_USER'));
@@ -891,11 +892,25 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
             WHERE ORACLE_USERNAME = v_user;
 
             DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', v_manv);
+            DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MABN', NULL);
             DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', v_vaitro);
         EXCEPTION
             WHEN NO_DATA_FOUND THEN
-                DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', NULL);
-                DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', NULL);
+                BEGIN
+                    SELECT MABN
+                    INTO v_mabn
+                    FROM BENHNHAN
+                    WHERE ORACLE_USERNAME = v_user;
+
+                    DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', NULL);
+                    DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MABN', v_mabn);
+                    DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', N'Benh nhan');
+                EXCEPTION
+                    WHEN NO_DATA_FOUND THEN
+                        DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', NULL);
+                        DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MABN', NULL);
+                        DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', NULL);
+                END;
         END;
     END set_ctx;
 
@@ -904,6 +919,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
     IS
         v_role NVARCHAR2(50) := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'VAITRO')));
         v_manv VARCHAR2(10)  := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'MANV')));
+        v_mabn VARCHAR2(10)  := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'MABN')));
         v_user VARCHAR2(30)  := UPPER(SYS_CONTEXT('USERENV', 'SESSION_USER'));
     BEGIN
         IF SYS_CONTEXT('USERENV', 'ISDBA') = 'TRUE'
@@ -911,8 +927,32 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
             RETURN '1=1';
         END IF;
 
-        IF v_role IS NULL OR v_manv IS NULL THEN
-            RETURN '1=0';
+        IF v_role IS NULL THEN
+            BEGIN
+                SELECT MANV, VAITRO
+                INTO v_manv, v_role
+                FROM NHANVIEN
+                WHERE ORACLE_USERNAME = v_user;
+
+                v_manv := UPPER(TRIM(v_manv));
+                v_role := UPPER(TRIM(v_role));
+                v_mabn := NULL;
+            EXCEPTION
+                WHEN NO_DATA_FOUND THEN
+                    BEGIN
+                        SELECT MABN
+                        INTO v_mabn
+                        FROM BENHNHAN
+                        WHERE ORACLE_USERNAME = v_user;
+
+                        v_mabn := UPPER(TRIM(v_mabn));
+                        v_role := UPPER(TRIM(N'Benh nhan'));
+                        v_manv := NULL;
+                    EXCEPTION
+                        WHEN NO_DATA_FOUND THEN
+                            RETURN '1=0';
+                    END;
+            END;
         END IF;
 
         CASE UPPER(p_obj)
@@ -923,6 +963,8 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
                     RETURN 'EXISTS (SELECT 1 FROM HSBA H ' ||
                            'WHERE H.MABN = BENHNHAN.MABN ' ||
                            'AND H.MABS = ''' || v_manv || ''')';
+                ELSIF v_role = 'BENH NHAN' THEN
+                    RETURN 'MABN = ''' || v_mabn || '''';
                 ELSE
                     RETURN '1=0';
                 END IF;
@@ -932,6 +974,8 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
                     RETURN '1=1';
                 ELSIF v_role = 'BAC SI/Y SI' THEN
                     RETURN 'MABS = ''' || v_manv || '''';
+                ELSIF v_role = 'BENH NHAN' THEN
+                    RETURN 'MABN = ''' || v_mabn || '''';
                 END IF;
                 RETURN '1=0';
 
@@ -941,7 +985,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
                 ELSIF v_role = 'BAC SI/Y SI' THEN
                     RETURN 'MAHSBA IN (SELECT MAHSBA FROM HSBA ' ||
                            'WHERE MABS = ''' || v_manv || ''')';
-                ELSIF v_role = 'KY THUAT VIEN' THEN      -- BỔ SUNG QUYỀN CHO KTV
+                ELSIF v_role = 'KY THUAT VIEN' THEN
                     RETURN 'MAKTV = ''' || v_manv || '''';
                 ELSE
                     RETURN '1=0';
@@ -2131,6 +2175,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
     PROCEDURE set_ctx IS
         v_user   VARCHAR2(30);
         v_manv   VARCHAR2(10);
+        v_mabn   VARCHAR2(10);
         v_vaitro NVARCHAR2(50);
     BEGIN
         v_user := UPPER(SYS_CONTEXT('USERENV', 'SESSION_USER'));
@@ -2142,12 +2187,25 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
             WHERE ORACLE_USERNAME = v_user;
 
             DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', v_manv);
+            DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MABN', NULL);
             DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', v_vaitro);
-
         EXCEPTION
             WHEN NO_DATA_FOUND THEN
-                DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', NULL);
-                DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', NULL);
+                BEGIN
+                    SELECT MABN
+                    INTO v_mabn
+                    FROM BVDBA.BENHNHAN
+                    WHERE ORACLE_USERNAME = v_user;
+
+                    DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', NULL);
+                    DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MABN', v_mabn);
+                    DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', N'Benh nhan');
+                EXCEPTION
+                    WHEN NO_DATA_FOUND THEN
+                        DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MANV', NULL);
+                        DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'MABN', NULL);
+                        DBMS_SESSION.SET_CONTEXT('HOSPITAL_CTX', 'VAITRO', NULL);
+                END;
         END;
     END set_ctx;
 
@@ -2158,88 +2216,87 @@ CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL AS
     )
     RETURN VARCHAR2
     IS
-        v_user   VARCHAR2(30);
-        v_manv   VARCHAR2(10);
-        v_vaitro NVARCHAR2(50);
+        v_role NVARCHAR2(50) := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'VAITRO')));
+        v_manv VARCHAR2(10)  := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'MANV')));
+        v_mabn VARCHAR2(10)  := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'MABN')));
+        v_user VARCHAR2(30)  := UPPER(SYS_CONTEXT('USERENV', 'SESSION_USER'));
     BEGIN
-        v_user := UPPER(SYS_CONTEXT('USERENV', 'SESSION_USER'));
-
-        -- User quan tri / DBA duoc xem toan bo
         IF SYS_CONTEXT('USERENV', 'ISDBA') = 'TRUE'
            OR v_user IN ('SYS', 'SYSTEM', 'BVDBA') THEN
             RETURN '1=1';
         END IF;
 
-        -- Lay thong tin user nghiep vu.
-        -- Uu tien context, neu context rong thi tra truc tiep NHANVIEN.
-        v_manv   := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'MANV')));
-        v_vaitro := UPPER(TRIM(SYS_CONTEXT('HOSPITAL_CTX', 'VAITRO')));
-
-        IF v_manv IS NULL OR v_vaitro IS NULL THEN
+        IF v_role IS NULL THEN
             BEGIN
                 SELECT MANV, VAITRO
-                INTO v_manv, v_vaitro
+                INTO v_manv, v_role
                 FROM BVDBA.NHANVIEN
                 WHERE ORACLE_USERNAME = v_user;
 
-                v_manv   := UPPER(TRIM(v_manv));
-                v_vaitro := UPPER(TRIM(v_vaitro));
+                v_manv := UPPER(TRIM(v_manv));
+                v_role := UPPER(TRIM(v_role));
+                v_mabn := NULL;
             EXCEPTION
                 WHEN NO_DATA_FOUND THEN
-                    RETURN '1=0';
+                    BEGIN
+                        SELECT MABN
+                        INTO v_mabn
+                        FROM BVDBA.BENHNHAN
+                        WHERE ORACLE_USERNAME = v_user;
+
+                        v_mabn := UPPER(TRIM(v_mabn));
+                        v_role := UPPER(TRIM(N'Benh nhan'));
+                        v_manv := NULL;
+                    EXCEPTION
+                        WHEN NO_DATA_FOUND THEN
+                            RETURN '1=0';
+                    END;
             END;
         END IF;
 
         CASE UPPER(p_obj)
-
-            WHEN 'HSBA' THEN
-                IF v_vaitro = 'DIEU PHOI VIEN' THEN
-                    RETURN '1=1';
-
-                ELSIF v_vaitro = 'BAC SI/Y SI' THEN
-                    RETURN 'MABS = ''' || v_manv || '''';
-
-                ELSE
-                    RETURN '1=0';
-                END IF;
-
-
             WHEN 'BENHNHAN' THEN
-                IF v_vaitro = 'DIEU PHOI VIEN' THEN
+                IF v_role = 'DIEU PHOI VIEN' THEN
                     RETURN '1=1';
-
-                ELSIF v_vaitro = 'BAC SI/Y SI' THEN
+                ELSIF v_role = 'BAC SI/Y SI' THEN
                     RETURN 'EXISTS (SELECT 1 FROM BVDBA.HSBA H ' ||
                            'WHERE H.MABN = BENHNHAN.MABN ' ||
                            'AND H.MABS = ''' || v_manv || ''')';
-
+                ELSIF v_role = 'BENH NHAN' THEN
+                    RETURN 'MABN = ''' || v_mabn || '''';
                 ELSE
                     RETURN '1=0';
                 END IF;
 
+            WHEN 'HSBA' THEN
+                IF v_role = 'DIEU PHOI VIEN' THEN
+                    RETURN '1=1';
+                ELSIF v_role = 'BAC SI/Y SI' THEN
+                    RETURN 'MABS = ''' || v_manv || '''';
+                ELSIF v_role = 'BENH NHAN' THEN
+                    RETURN 'MABN = ''' || v_mabn || '''';
+                END IF;
+                RETURN '1=0';
 
             WHEN 'HSBA_DV' THEN
-                IF v_vaitro = 'DIEU PHOI VIEN' THEN
+                IF v_role = 'DIEU PHOI VIEN' THEN
                     RETURN '1=1';
-
-                ELSIF v_vaitro = 'BAC SI/Y SI' THEN
+                ELSIF v_role = 'BAC SI/Y SI' THEN
                     RETURN 'MAHSBA IN (SELECT H.MAHSBA FROM BVDBA.HSBA H ' ||
                            'WHERE H.MABS = ''' || v_manv || ''')';
-
+                ELSIF v_role = 'KY THUAT VIEN' THEN
+                    RETURN 'MAKTV = ''' || v_manv || '''';
                 ELSE
                     RETURN '1=0';
                 END IF;
-
 
             WHEN 'DONTHUOC' THEN
-                IF v_vaitro = 'BAC SI/Y SI' THEN
+                IF v_role = 'BAC SI/Y SI' THEN
                     RETURN 'MAHSBA IN (SELECT H.MAHSBA FROM BVDBA.HSBA H ' ||
                            'WHERE H.MABS = ''' || v_manv || ''')';
-
                 ELSE
                     RETURN '1=0';
                 END IF;
-
 
             ELSE
                 RETURN '1=0';

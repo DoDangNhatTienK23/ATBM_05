@@ -80,13 +80,17 @@ namespace OracleAdminApp.Forms
         {
             var cardGrid = UIHelper.CreateCard(10, 10, 1090, 300, "DANH SACH BENH NHAN");
             dgvBenhNhan = UIHelper.CreateGrid();
-            dgvBenhNhan.Dock = DockStyle.Fill;
+            dgvBenhNhan.Dock = DockStyle.None;
+            const int headerHeight = 28;
+            dgvBenhNhan.Location = new Point(0, headerHeight);
+            dgvBenhNhan.Size = new Size(cardGrid.Width - 2, cardGrid.Height - headerHeight - 2);
+            dgvBenhNhan.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvBenhNhan.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvBenhNhan.CellClick += (s, e) => FillBenhNhanFromGrid();
             cardGrid.Controls.Add(dgvBenhNhan);
             page.Controls.Add(cardGrid);
 
-            var cardEdit = UIHelper.CreateCard(10, 320, 1090, 310, "THEM / CAP NHAT BENH NHAN");
+            var cardEdit = UIHelper.CreateCard(10, 320, 1090, 360, "THEM / CAP NHAT BENH NHAN");
             page.Controls.Add(cardEdit);
 
             UIHelper.CreateLabeledInput(cardEdit, "Ma BN", 15, 30, 120, out txtMaBN);
@@ -111,24 +115,26 @@ namespace OracleAdminApp.Forms
             UIHelper.CreateLabeledInput(cardEdit, "Di ung thuoc", 15, 270, 1015, out txtDiUng);
 
             var btnNew = UIHelper.CreateButton("Nhap moi", ButtonStyle.Secondary);
-            btnNew.Location = new Point(760, 265);
             btnNew.Size = new Size(90, 32);
             btnNew.Click += (s, e) => ClearBenhNhanInputs();
             cardEdit.Controls.Add(btnNew);
 
             var btnInsert = UIHelper.CreateButton("Them", ButtonStyle.Success);
-            btnInsert.Location = new Point(860, 265);
             btnInsert.Size = new Size(80, 32);
             btnInsert.Click += (s, e) => InsertBenhNhan();
             cardEdit.Controls.Add(btnInsert);
 
             var btnUpdate = UIHelper.CreateButton("Cap nhat", ButtonStyle.Primary);
-            btnUpdate.Location = new Point(950, 265);
-            btnUpdate.Size = new Size(80, 32);
+            btnUpdate.Size = new Size(90, 32);
             btnUpdate.Click += (s, e) => UpdateBenhNhan();
             cardEdit.Controls.Add(btnUpdate);
 
-            lblStatusBN = new Label { Location = new Point(15, 635), Size = new Size(800, 22), Font = new Font("Segoe UI", 8.5f) };
+            var btnY = txtDiUng.Bottom + 6;
+            btnUpdate.Location = new Point(cardEdit.Width - 20 - btnUpdate.Width, btnY);
+            btnInsert.Location = new Point(btnUpdate.Left - 10 - btnInsert.Width, btnY);
+            btnNew.Location = new Point(btnInsert.Left - 10 - btnNew.Width, btnY);
+
+            lblStatusBN = new Label { Location = new Point(15, 690), Size = new Size(800, 22), Font = new Font("Segoe UI", 8.5f) };
             page.Controls.Add(lblStatusBN);
 
             LoadBenhNhan();
@@ -138,7 +144,11 @@ namespace OracleAdminApp.Forms
         {
             var cardGrid = UIHelper.CreateCard(10, 10, 1090, 300, "DANH SACH HSBA");
             dgvHSBA = UIHelper.CreateGrid();
-            dgvHSBA.Dock = DockStyle.Fill;
+            dgvHSBA.Dock = DockStyle.None;
+            const int hsbaHeaderHeight = 28;
+            dgvHSBA.Location = new Point(0, hsbaHeaderHeight);
+            dgvHSBA.Size = new Size(cardGrid.Width - 2, cardGrid.Height - hsbaHeaderHeight - 2);
+            dgvHSBA.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvHSBA.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvHSBA.CellClick += (s, e) => FillHSBAFromGrid();
             cardGrid.Controls.Add(dgvHSBA);
@@ -186,7 +196,11 @@ namespace OracleAdminApp.Forms
         {
             var cardGrid = UIHelper.CreateCard(10, 10, 1090, 300, "DANH SACH HSBA_DV");
             dgvHSBADV = UIHelper.CreateGrid();
-            dgvHSBADV.Dock = DockStyle.Fill;
+            dgvHSBADV.Dock = DockStyle.None;
+            const int dvHeaderHeight = 28;
+            dgvHSBADV.Location = new Point(0, dvHeaderHeight);
+            dgvHSBADV.Size = new Size(cardGrid.Width - 2, cardGrid.Height - dvHeaderHeight - 2);
+            dgvHSBADV.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvHSBADV.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvHSBADV.CellClick += (s, e) => FillHSBADVFromGrid();
             cardGrid.Controls.Add(dgvHSBADV);
