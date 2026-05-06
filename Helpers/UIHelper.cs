@@ -64,6 +64,8 @@ namespace OracleAdminApp.Helpers
 
             if (!string.IsNullOrEmpty(cardTitle))
             {
+                outer.Padding = new Padding(0, 28, 0, 0);
+
                 var lbl = new Label
                 {
                     Text = cardTitle,
@@ -147,6 +149,16 @@ namespace OracleAdminApp.Helpers
             if (isPassword) txt.PasswordChar = '●';
             parent.Controls.Add(lbl);
             parent.Controls.Add(txt);
+        }
+
+        public static void ConfigureMemo(TextBox txt, int height)
+        {
+            txt.Multiline = true;
+            txt.Height = height;
+            txt.ScrollBars = ScrollBars.Vertical;
+            txt.AcceptsReturn = true;
+            txt.AcceptsTab = false;
+            txt.WordWrap = true;
         }
 
         // ── Labeled ComboBox ──────────────────────────────────────────────────

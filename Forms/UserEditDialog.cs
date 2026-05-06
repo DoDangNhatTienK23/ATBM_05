@@ -29,7 +29,7 @@ namespace OracleAdminApp.Forms
 
         private void InitializeLayout()
         {
-            this.Text            = IsEdit ? "Chinh sua User: " + _existingUser : "Tao moi User";
+            this.Text            = IsEdit ? "Chỉnh sửa User: " + _existingUser : "Tạo mới User";
             this.Size            = new Size(460, 490);
             this.StartPosition   = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -42,7 +42,7 @@ namespace OracleAdminApp.Forms
             var pnlTitle = new Panel { Dock = DockStyle.Top, Height = 46, BackColor = Color.FromArgb(30, 50, 80) };
             pnlTitle.Controls.Add(new Label
             {
-                Text      = IsEdit ? "Sua: " + _existingUser : "+ Tao User moi",
+                Text      = IsEdit ? "Sửa: " + _existingUser : "+ Tạo User mới",
                 ForeColor = Color.White,
                 Font      = new Font("Segoe UI", 12f, FontStyle.Bold),
                 AutoSize  = true,
@@ -54,7 +54,7 @@ namespace OracleAdminApp.Forms
             int y    = 12;
 
             // Username
-            UIHelper.CreateLabeledInput(card, "Ten dang nhap (USERNAME) *", 10, y, 385, out txtUsername);
+            UIHelper.CreateLabeledInput(card, "Tên đăng nhập (USERNAME) *", 10, y, 385, out txtUsername);
             y += 52;
             if (IsEdit)
             {
@@ -65,9 +65,9 @@ namespace OracleAdminApp.Forms
 
             // Password
             UIHelper.CreateLabeledInput(card,
-                IsEdit ? "Mat khau moi (de trong = khong doi)" : "Mat khau *",
+                IsEdit ? "Mật khẩu mới (để trống = không đổi)" : "Mật khẩu *",
                 10, y, 185, out txtPassword, true);
-            UIHelper.CreateLabeledInput(card, "Xac nhan mat khau",
+            UIHelper.CreateLabeledInput(card, "Xác nhận mật khẩu",
                 210, y, 185, out txtConfirmPwd, true);
             y += 52;
 
@@ -85,7 +85,7 @@ namespace OracleAdminApp.Forms
 
             if (IsEdit)
             {
-                UIHelper.CreateLabeledCombo(card, "Trang thai tai khoan", 210, y, 185, out cmbStatus);
+                UIHelper.CreateLabeledCombo(card, "Trạng thái tài khoản", 210, y, 185, out cmbStatus);
                 cmbStatus.Items.AddRange(new object[] { "OPEN", "LOCKED" });
                 cmbStatus.SelectedIndex = 0;
             }
@@ -94,7 +94,7 @@ namespace OracleAdminApp.Forms
             // Expire checkbox
             chkExpire = new CheckBox
             {
-                Text     = "Yeu cau doi mat khau lan dau dang nhap (PASSWORD EXPIRE)",
+                Text     = "Yêu cầu đổi mật khẩu lần đầu đăng nhập (PASSWORD EXPIRE)",
                 Location = new Point(10, y),
                 AutoSize = true,
                 Font     = new Font("Segoe UI", 8.5f),
@@ -112,13 +112,13 @@ namespace OracleAdminApp.Forms
             };
 
             // Buttons
-            btnCancel           = UIHelper.CreateButton("Huy", ButtonStyle.Secondary);
+            btnCancel           = UIHelper.CreateButton("Hủy", ButtonStyle.Secondary);
             btnCancel.Size      = new Size(90, 34);
             btnCancel.Location  = new Point(245, 428);
             btnCancel.ForeColor = UIHelper.TextDark;
             btnCancel.Click    += (s, e) => { this.DialogResult = DialogResult.Cancel; this.Close(); };
 
-            btnSave          = UIHelper.CreateButton(IsEdit ? "Luu thay doi" : "+ Tao User", ButtonStyle.Primary);
+            btnSave          = UIHelper.CreateButton(IsEdit ? "Lưu thay đổi" : "+ Tạo User", ButtonStyle.Primary);
             btnSave.Size     = new Size(130, 34);
             btnSave.Location = new Point(310, 428);
             btnSave.Click   += BtnSave_Click;
@@ -179,7 +179,7 @@ namespace OracleAdminApp.Forms
             }
             catch (Exception ex)
             {
-                ShowStatus("Khong the tai thong tin user: " + ex.Message, StatusType.Error);
+                ShowStatus("Không thể tải thông tin user: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -188,13 +188,13 @@ namespace OracleAdminApp.Forms
         {
             // --- Validate ---
             if (!IsEdit && string.IsNullOrWhiteSpace(txtUsername.Text))
-            { ShowStatus("Vui long nhap ten dang nhap!", StatusType.Error); return; }
+            { ShowStatus("Vui lòng nhập tên đăng nhập!", StatusType.Error); return; }
 
             if (!IsEdit && string.IsNullOrWhiteSpace(txtPassword.Text))
-            { ShowStatus("Vui long nhap mat khau!", StatusType.Error); return; }
+            { ShowStatus("Vui lòng nhập mật khẩu!", StatusType.Error); return; }
 
             if (!string.IsNullOrEmpty(txtPassword.Text) && txtPassword.Text != txtConfirmPwd.Text)
-            { ShowStatus("Mat khau xac nhan khong khop!", StatusType.Error); return; }
+            { ShowStatus("Mật khẩu xác nhận không khớp!", StatusType.Error); return; }
 
             try
             {
@@ -270,7 +270,7 @@ namespace OracleAdminApp.Forms
             }
             catch (Exception ex)
             {
-                ShowStatus("Loi: " + ex.Message, StatusType.Error);
+                ShowStatus("Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 

@@ -29,8 +29,8 @@ namespace OracleAdminApp.Forms
             this.Padding = new Padding(10);
 
             var header = UIHelper.CreateSectionHeader(
-                "Thu hoi quyen",
-                "Xem va thu hoi quyen dang duoc cap cho user hoac role");
+                "Thu hồi quyền",
+                "Xem và thu hồi quyền đang được cấp cho user hoặc role");
 
             var pnlTop = new Panel
             {
@@ -39,27 +39,27 @@ namespace OracleAdminApp.Forms
                 BackColor = Color.Transparent
             };
 
-            var card = UIHelper.CreateCard(0, 0, 720, 105, "CHON DOI TUONG");
+            var card = UIHelper.CreateCard(0, 0, 720, 105, "CHỌN ĐỐI TƯỢNG");
             card.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             pnlTop.Controls.Add(card);
 
-            UIHelper.CreateLabeledCombo(card, "Loai", 10, 32, 110, out cmbTargetType);
+            UIHelper.CreateLabeledCombo(card, "Loại", 10, 32, 110, out cmbTargetType);
             cmbTargetType.Items.AddRange(new object[] { "User", "Role" });
             cmbTargetType.SelectedIndex = 0;
             cmbTargetType.SelectedIndexChanged += (s, e) => LoadTargets();
 
-            UIHelper.CreateLabeledCombo(card, "Ten User / Role", 140, 32, 220, out cmbTarget);
+            UIHelper.CreateLabeledCombo(card, "Tên User / Role", 140, 32, 220, out cmbTarget);
 
-            UIHelper.CreateLabeledCombo(card, "Loai quyen hien thi", 380, 32, 220, out cmbPrivType);
+            UIHelper.CreateLabeledCombo(card, "Loại quyền hiển thị", 380, 32, 220, out cmbPrivType);
             cmbPrivType.Items.AddRange(new object[] {
-                "Tat ca",
-                "Quyen tren doi tuong",
-                "Quyen he thong",
-                "Role duoc cap"
+                "Tất cả",
+                "Quyền trên đối tượng",
+                "Quyền hệ thống",
+                "Role được cấp"
             });
             cmbPrivType.SelectedIndex = 0;
 
-            btnLoadPrivs = UIHelper.CreateButton("Tai danh sach quyen", ButtonStyle.Secondary);
+            btnLoadPrivs = UIHelper.CreateButton("Tải danh sách quyền", ButtonStyle.Secondary);
             btnLoadPrivs.Size = new Size(180, 34);
             btnLoadPrivs.Location = new Point(0, 115);
             btnLoadPrivs.ForeColor = UIHelper.TextDark;
@@ -73,7 +73,7 @@ namespace OracleAdminApp.Forms
                 BackColor = Color.Transparent
             };
 
-            btnRevoke = UIHelper.CreateButton("THU HOI QUYEN DA CHON", ButtonStyle.Danger);
+            btnRevoke = UIHelper.CreateButton("THU HỒI QUYỀN ĐÃ CHỌN", ButtonStyle.Danger);
             btnRevoke.Size = new Size(220, 36);
             btnRevoke.Anchor = AnchorStyles.Right | AnchorStyles.Top;
             btnRevoke.Click += BtnRevoke_Click;
@@ -90,13 +90,13 @@ namespace OracleAdminApp.Forms
 
             dgvCurrentPrivs = UIHelper.CreateGrid();
             dgvCurrentPrivs.Dock = DockStyle.Fill;
-            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "PRIV_TYPE", HeaderText = "Loai quyen", FillWeight = 14 });
-            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "PRIVILEGE", HeaderText = "Ten quyen / Role", FillWeight = 20 });
+            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "PRIV_TYPE", HeaderText = "Loại quyền", FillWeight = 14 });
+            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "PRIVILEGE", HeaderText = "Tên quyền / Role", FillWeight = 20 });
             dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "OBJECT_OWNER", HeaderText = "Schema", FillWeight = 13 });
-            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "OBJECT_NAME", HeaderText = "Ten doi tuong", FillWeight = 18 });
-            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "OBJECT_TYPE", HeaderText = "Loai doi tuong", FillWeight = 12 });
-            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "COLUMNS", HeaderText = "Cot (neu co)", FillWeight = 13 });
-            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "GRANT_OPTION", HeaderText = "Tuy chon cap", FillWeight = 10 });
+            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "OBJECT_NAME", HeaderText = "Tên đối tượng", FillWeight = 18 });
+            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "OBJECT_TYPE", HeaderText = "Loại đối tượng", FillWeight = 12 });
+            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "COLUMNS", HeaderText = "Cột (nếu có)", FillWeight = 13 });
+            dgvCurrentPrivs.Columns.Add(new DataGridViewTextBoxColumn { Name = "GRANT_OPTION", HeaderText = "Tùy chọn cấp", FillWeight = 10 });
 
             dgvCurrentPrivs.CellFormatting += DgvPrivs_CellFormatting;
             pnlGrid.Controls.Add(dgvCurrentPrivs);
@@ -114,9 +114,9 @@ namespace OracleAdminApp.Forms
             {
                 switch (e.Value.ToString())
                 {
-                    case "Doi tuong": e.CellStyle.ForeColor = UIHelper.Primary; break;
-                    case "Cot": e.CellStyle.ForeColor = Color.DarkCyan; break;
-                    case "He thong": e.CellStyle.ForeColor = UIHelper.Warning; break;
+                    case "Đối tượng": e.CellStyle.ForeColor = UIHelper.Primary; break;
+                    case "Cột": e.CellStyle.ForeColor = Color.DarkCyan; break;
+                    case "Hệ thống": e.CellStyle.ForeColor = UIHelper.Warning; break;
                     case "Role": e.CellStyle.ForeColor = UIHelper.Success; break;
                 }
             }
@@ -149,7 +149,7 @@ namespace OracleAdminApp.Forms
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus, "Loi tai danh sach: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Lỗi tải danh sách: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -157,18 +157,18 @@ namespace OracleAdminApp.Forms
         {
             if (cmbTarget.SelectedItem == null)
             {
-                UIHelper.SetStatus(lblStatus, "Vui long chon User hoac Role!", StatusType.Warning);
+                UIHelper.SetStatus(lblStatus, "Vui lòng chọn User hoặc Role!", StatusType.Warning);
                 return;
             }
 
             dgvCurrentPrivs.Rows.Clear();
             string grantee = cmbTarget.SelectedItem.ToString();
-            string privType = cmbPrivType.SelectedItem?.ToString() ?? "Tat ca";
-            bool showObj = privType == "Tat ca" || privType == "Quyen tren doi tuong";
-            bool showSys = privType == "Tat ca" || privType == "Quyen he thong";
-            bool showRole = privType == "Tat ca" || privType == "Role duoc cap";
+            string privType = cmbPrivType.SelectedItem?.ToString() ?? "Tất cả";
+            bool showObj = privType == "Tất cả" || privType == "Quyền trên đối tượng";
+            bool showSys = privType == "Tất cả" || privType == "Quyền hệ thống";
+            bool showRole = privType == "Tất cả" || privType == "Role được cấp";
 
-            UIHelper.SetStatus(lblStatus, "Dang tai...", StatusType.Info);
+            UIHelper.SetStatus(lblStatus, "Đang tải...", StatusType.Info);
 
             try
             {
@@ -193,7 +193,7 @@ namespace OracleAdminApp.Forms
                                 {
                                     string objType = r["OBJECT_TYPE"]?.ToString() ?? "";
                                     string colName = r["COLUMN_NAME"]?.ToString() ?? "";
-                                    string privLabel = objType == "COLUMN" ? "Cot" : "Doi tuong";
+                                    string privLabel = objType == "COLUMN" ? "Cột" : "Đối tượng";
 
                                     dgvCurrentPrivs.Rows.Add(
                                         privLabel,
@@ -224,7 +224,7 @@ namespace OracleAdminApp.Forms
                                 while (r.Read())
                                 {
                                     dgvCurrentPrivs.Rows.Add(
-                                        "He thong",
+                                        "Hệ thống",
                                         r["PRIVILEGE"].ToString(),
                                         "", "", "SYSTEM", "",
                                         r["ADMIN_OPT"].ToString()
@@ -261,12 +261,12 @@ namespace OracleAdminApp.Forms
                 }
 
                 UIHelper.SetStatus(lblStatus,
-                    dgvCurrentPrivs.Rows.Count + " quyen dang duoc cap cho " + grantee + ".",
+                    dgvCurrentPrivs.Rows.Count + " quyền đang được cấp cho " + grantee + ".",
                     StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -274,7 +274,7 @@ namespace OracleAdminApp.Forms
         {
             if (dgvCurrentPrivs.SelectedRows.Count == 0)
             {
-                UIHelper.SetStatus(lblStatus, "Vui long chon quyen can thu hoi!", StatusType.Warning);
+                UIHelper.SetStatus(lblStatus, "Vui lòng chọn quyền cần thu hồi!", StatusType.Warning);
                 return;
             }
             if (cmbTarget.SelectedItem == null) return;
@@ -289,17 +289,17 @@ namespace OracleAdminApp.Forms
 
             string confirmMsg;
             if (privType == "Role")
-                confirmMsg = $"Thu hoi role \"{privilege}\" tu \"{grantee}\"?";
-            else if (privType == "He thong")
-                confirmMsg = $"Thu hoi quyen he thong \"{privilege}\" tu \"{grantee}\"?";
-            else if (privType == "Cot")
-                confirmMsg = $"Thu hoi quyen \"{privilege}\" tren cot \"{columns}\" cua \"{owner}.{objName}\" tu \"{grantee}\"?";
+                confirmMsg = $"Thu hồi role \"{privilege}\" từ \"{grantee}\"?";
+            else if (privType == "Hệ thống")
+                confirmMsg = $"Thu hồi quyền hệ thống \"{privilege}\" từ \"{grantee}\"?";
+            else if (privType == "Cột")
+                confirmMsg = $"Thu hồi quyền \"{privilege}\" trên cột \"{columns}\" của \"{owner}.{objName}\" từ \"{grantee}\"?";
             else
-                confirmMsg = $"Thu hoi quyen \"{privilege}\" tren \"{owner}.{objName}\" tu \"{grantee}\"?";
+                confirmMsg = $"Thu hồi quyền \"{privilege}\" trên \"{owner}.{objName}\" từ \"{grantee}\"?";
 
             if (MessageBox.Show(
-                    confirmMsg + "\nHanh dong nay khong the hoan tac!",
-                    "Xac nhan thu hoi",
+                    confirmMsg + "\nHành động này không thể hoàn tác!",
+                    "Xác nhận thu hồi",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Warning) != DialogResult.Yes)
                 return;
@@ -320,7 +320,7 @@ namespace OracleAdminApp.Forms
                             cmd.ExecuteNonQuery();
                         }
                     }
-                    else if (privType == "He thong")
+                    else if (privType == "Hệ thống")
                     {
                         using (var cmd = new OracleCommand("SP_REVOKE_SYS_PRIV", conn))
                         {
@@ -341,7 +341,7 @@ namespace OracleAdminApp.Forms
                             cmd.Parameters.Add("p_grantee", OracleDbType.Varchar2).Value = grantee;
 
                             var colParam = cmd.Parameters.Add("p_columns", OracleDbType.Varchar2);
-                            colParam.Value = (privType == "Cot" && !string.IsNullOrEmpty(columns))
+                            colParam.Value = (privType == "Cột" && !string.IsNullOrEmpty(columns))
                                 ? (object)columns
                                 : DBNull.Value;
 
@@ -350,12 +350,12 @@ namespace OracleAdminApp.Forms
                     }
                 }
 
-                UIHelper.SetStatus(lblStatus, "Da thu hoi quyen thanh cong!", StatusType.Success);
+                UIHelper.SetStatus(lblStatus, "Đã thu hồi quyền thành công!", StatusType.Success);
                 LoadPrivileges();
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
     }
@@ -383,21 +383,21 @@ namespace OracleAdminApp.Forms
             this.BackColor = UIHelper.LightBg;
 
             var header = UIHelper.CreateSectionHeader(
-                "Xem quyen",
-                "Xem toan bo quyen dang duoc cap cho user hoac role");
+                "Xem quyền",
+                "Xem toàn bộ quyền đang được cấp cho user hoặc role");
             this.Controls.Add(header);
 
-            var card = UIHelper.CreateCard(10, 65, 700, 90, "TIM KIEM");
+            var card = UIHelper.CreateCard(10, 65, 700, 90, "TÌM KIẾM");
             this.Controls.Add(card);
 
-            UIHelper.CreateLabeledCombo(card, "Loai", 10, 30, 110, out cmbViewType);
+            UIHelper.CreateLabeledCombo(card, "Loại", 10, 30, 110, out cmbViewType);
             cmbViewType.Items.AddRange(new object[] { "User", "Role" });
             cmbViewType.SelectedIndex = 0;
             cmbViewType.SelectedIndexChanged += (s, e) => LoadTargets();
 
-            UIHelper.CreateLabeledCombo(card, "Ten User / Role", 140, 30, 240, out cmbViewTarget);
+            UIHelper.CreateLabeledCombo(card, "Tên User / Role", 140, 30, 240, out cmbViewTarget);
 
-            btnView = UIHelper.CreateButton("Xem quyen", ButtonStyle.Primary);
+            btnView = UIHelper.CreateButton("Xem quyền", ButtonStyle.Primary);
             btnView.Size = new Size(130, 34);
             btnView.Location = new Point(400, 36);
             card.Controls.Add(btnView);
@@ -421,22 +421,22 @@ namespace OracleAdminApp.Forms
             };
 
             tabResults.TabPages.Add(BuildPrivTab(
-                "  Quyen doi tuong  ", out dgvObjectPrivs,
+                "  Quyền đối tượng  ", out dgvObjectPrivs,
                 new[] { "OWNER", "OBJECT_NAME", "OBJECT_TYPE", "PRIVILEGE", "GRANTABLE" },
-                new[] { "Schema", "Doi tuong", "Kieu", "Quyen", "Grant Option" }));
+                new[] { "Schema", "Đối tượng", "Kiểu", "Quyền", "Grant Option" }));
 
             tabResults.TabPages.Add(BuildPrivTab(
-                "  Quyen theo cot  ", out dgvColPrivs,
+                "  Quyền theo cột  ", out dgvColPrivs,
                 new[] { "OWNER", "OBJECT_NAME", "COLUMN_NAME", "PRIVILEGE", "GRANTABLE" },
-                new[] { "Schema", "Bang/View", "Cot", "Quyen", "Grant Option" }));
+                new[] { "Schema", "Bảng/View", "Cột", "Quyền", "Grant Option" }));
 
             tabResults.TabPages.Add(BuildPrivTab(
-                "  Quyen he thong  ", out dgvSysPrivs,
+                "  Quyền hệ thống  ", out dgvSysPrivs,
                 new[] { "PRIVILEGE", "ADMIN_OPT" },
-                new[] { "Quyen he thong", "Admin Option" }));
+                new[] { "Quyền hệ thống", "Admin Option" }));
 
             tabResults.TabPages.Add(BuildPrivTab(
-                "  Role duoc cap  ", out dgvRolePrivs,
+                "  Role được cấp  ", out dgvRolePrivs,
                 new[] { "GRANTED_ROLE", "ADMIN_OPTION", "DEFAULT_ROLE" },
                 new[] { "Role", "Admin Option", "Default" }));
 
@@ -485,7 +485,7 @@ namespace OracleAdminApp.Forms
             }
             catch (Exception ex)
             {
-                lblCount.Text = "Loi tai danh sach: " + ex.Message;
+                lblCount.Text = "Lỗi tải danh sách: " + ex.Message;
                 lblCount.ForeColor = UIHelper.Danger;
             }
         }
@@ -499,7 +499,7 @@ namespace OracleAdminApp.Forms
             dgvColPrivs.Rows.Clear();
             dgvSysPrivs.Rows.Clear();
             dgvRolePrivs.Rows.Clear();
-            lblCount.Text = "Dang tai...";
+            lblCount.Text = "Đang tải...";
             lblCount.ForeColor = UIHelper.TextMuted;
 
             try
@@ -584,15 +584,15 @@ namespace OracleAdminApp.Forms
 
                 int total = dgvObjectPrivs.Rows.Count + dgvColPrivs.Rows.Count
                           + dgvSysPrivs.Rows.Count + dgvRolePrivs.Rows.Count;
-                lblCount.Text = $"{target}: {dgvObjectPrivs.Rows.Count} quyen doi tuong  |  " +
-                                     $"{dgvColPrivs.Rows.Count} quyen cot  |  " +
-                                     $"{dgvSysPrivs.Rows.Count} quyen he thong  |  " +
-                                     $"{dgvRolePrivs.Rows.Count} role  (tong: {total})";
+                lblCount.Text = $"{target}: {dgvObjectPrivs.Rows.Count} quyền đối tượng  |  " +
+                                     $"{dgvColPrivs.Rows.Count} quyền cột  |  " +
+                                     $"{dgvSysPrivs.Rows.Count} quyền hệ thống  |  " +
+                                     $"{dgvRolePrivs.Rows.Count} role  (tổng: {total})";
                 lblCount.ForeColor = UIHelper.Success;
             }
             catch (Exception ex)
             {
-                lblCount.Text = "Loi: " + ex.Message;
+                lblCount.Text = "Lỗi: " + ex.Message;
                 lblCount.ForeColor = UIHelper.Danger;
             }
         }
