@@ -64,7 +64,7 @@ namespace OracleAdminApp.Forms
 
             lblConnInfo = new Label
             {
-                Text = "Ket noi: " + ConnectedUser,
+                Text = "Kết nối: " + ConnectedUser,
                 ForeColor = Color.FromArgb(180, 210, 255),
                 Font = new Font("Segoe UI", 9f),
                 AutoSize = true,
@@ -83,11 +83,11 @@ namespace OracleAdminApp.Forms
             };
 
             int topY = 20;
-            btnUsers      = CreateSidebarButton("  Quan ly User",    topY); topY += 50;
-            btnRoles      = CreateSidebarButton("  Quan ly Role",    topY); topY += 50;
-            btnGrantPriv  = CreateSidebarButton("  Cap quyen",       topY); topY += 50;
-            btnRevokePriv = CreateSidebarButton("  Thu hoi quyen",   topY); topY += 50;
-            btnViewPriv   = CreateSidebarButton("  Xem quyen",       topY); topY += 50;
+            btnUsers      = CreateSidebarButton("  Quản lý User",    topY); topY += 50;
+            btnRoles      = CreateSidebarButton("  Quản lý Role",    topY); topY += 50;
+            btnGrantPriv  = CreateSidebarButton("  Cấp quyền",       topY); topY += 50;
+            btnRevokePriv = CreateSidebarButton("  Thu hồi quyền",   topY); topY += 50;
+            btnViewPriv   = CreateSidebarButton("  Xem quyền",       topY); topY += 50;
 
             btnUsers.Click      += (s, e) => ShowPanel(btnUsers);
             btnRoles.Click      += (s, e) => ShowPanel(btnRoles);
@@ -109,7 +109,7 @@ namespace OracleAdminApp.Forms
             };
             pnlSidebar.Controls.Add(sep);
 
-            btnLogout = CreateSidebarButton("  Dang xuat", topY + 15);
+            btnLogout = CreateSidebarButton("  Đăng xuất", topY + 15);
             btnLogout.ForeColor = Color.FromArgb(255, 140, 140);
             btnLogout.Click += (s, e) => Logout();
             pnlSidebar.Controls.Add(btnLogout);
@@ -204,7 +204,7 @@ namespace OracleAdminApp.Forms
 
         private void Logout()
         {
-            if (MessageBox.Show("Ban co chac muon dang xuat?", "Xac nhan",
+            if (MessageBox.Show("Bạn có chắc muốn đăng xuất?", "Xác nhận",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 var login = new LoginForm();

@@ -56,8 +56,8 @@ namespace OracleAdminApp.Forms
             BackColor = UIHelper.LightBg;
 
             var header = UIHelper.CreateSectionHeader(
-                "Cap quyen",
-                "Cap quyen tren doi tuong cho user/role, hoac cap role cho user");
+                "Cấp quyền",
+                "Cấp quyền trên đối tượng cho user/role, hoặc cấp role cho user");
 
             tabGrantType = new TabControl
             {
@@ -66,8 +66,8 @@ namespace OracleAdminApp.Forms
                 Location = new Point(0, header.Bottom + 5)
             };
 
-            tabObjectPriv = new TabPage("  Quyen tren doi tuong  ");
-            tabRoleToUser = new TabPage("  Cap Role cho User  ");
+            tabObjectPriv = new TabPage("  Quyền trên đối tượng  ");
+            tabRoleToUser = new TabPage("  Cấp Role cho User  ");
 
             BuildObjectPrivTab();
             BuildRoleToUserTab();
@@ -92,10 +92,10 @@ namespace OracleAdminApp.Forms
             scrollPanel.AutoScrollMinSize = new Size(1260, 900);
             tabObjectPriv.Controls.Add(scrollPanel);
 
-            var cardGrantee = UIHelper.CreateCard(10, 10, 700, 100, "NGUOI NHAN QUYEN");
+            var cardGrantee = UIHelper.CreateCard(10, 10, 700, 100, "NGƯỜI NHẬN QUYỀN");
             scrollPanel.Controls.Add(cardGrantee);
 
-            UIHelper.CreateLabeledCombo(cardGrantee, "Loai", 10, 32, 130, out cmbGranteeType);
+            UIHelper.CreateLabeledCombo(cardGrantee, "Loại", 10, 32, 130, out cmbGranteeType);
             cmbGranteeType.Items.AddRange(new object[] { "User", "Role" });
             cmbGranteeType.SelectedIndex = 0;
             cmbGranteeType.SelectedIndexChanged += (s, e) =>
@@ -106,17 +106,17 @@ namespace OracleAdminApp.Forms
                 LoadGrantOptionGrid();
             };
 
-            UIHelper.CreateLabeledCombo(cardGrantee, "Ten User / Role", 160, 32, 500, out cmbGrantee);
+            UIHelper.CreateLabeledCombo(cardGrantee, "Tên User / Role", 160, 32, 500, out cmbGrantee);
             cmbGrantee.SelectedIndexChanged += (s, e) =>
             {
                 LoadObjectPrivilegeGrid();
                 LoadGrantOptionGrid();
             };
 
-            var cardObject = UIHelper.CreateCard(10, 120, 700, 100, "DOI TUONG CAP QUYEN");
+            var cardObject = UIHelper.CreateCard(10, 120, 700, 100, "ĐỐI TƯỢNG CẤP QUYỀN");
             scrollPanel.Controls.Add(cardObject);
 
-            UIHelper.CreateLabeledCombo(cardObject, "Loai doi tuong", 10, 32, 120, out cmbObjectType);
+            UIHelper.CreateLabeledCombo(cardObject, "Loại đối tượng", 10, 32, 120, out cmbObjectType);
             cmbObjectType.Items.AddRange(new object[] { "TABLE", "VIEW", "PROCEDURE", "FUNCTION" });
             cmbObjectType.SelectedIndex = 0;
             cmbObjectType.SelectedIndexChanged += (s, e) =>
@@ -134,10 +134,10 @@ namespace OracleAdminApp.Forms
                 LoadColumns();
             };
 
-            UIHelper.CreateLabeledCombo(cardObject, "Ten doi tuong", 320, 32, 340, out cmbObjectName);
+            UIHelper.CreateLabeledCombo(cardObject, "Tên đối tượng", 320, 32, 340, out cmbObjectName);
             cmbObjectName.SelectedIndexChanged += (s, e) => LoadColumns();
 
-            var cardPriv = UIHelper.CreateCard(10, 230, 270, 190, "CHON QUYEN");
+            var cardPriv = UIHelper.CreateCard(10, 230, 270, 190, "CHỌN QUYỀN");
             scrollPanel.Controls.Add(cardPriv);
 
             clbPrivileges = new CheckedListBox
@@ -152,13 +152,13 @@ namespace OracleAdminApp.Forms
             clbPrivileges.ItemCheck += ClbPrivileges_ItemCheck;
             cardPriv.Controls.Add(clbPrivileges);
 
-            pnlColumnArea = UIHelper.CreateCard(290, 230, 420, 190, "PHAN QUYEN DEN COT");
+            pnlColumnArea = UIHelper.CreateCard(290, 230, 420, 190, "PHÂN QUYỀN ĐẾN CỘT");
             pnlColumnArea.Visible = false;
             scrollPanel.Controls.Add(pnlColumnArea);
 
             chkAllColumns = new CheckBox
             {
-                Text = "Tat ca cac cot",
+                Text = "Tất cả các cột",
                 Location = new Point(10, 35),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9f),
@@ -182,7 +182,7 @@ namespace OracleAdminApp.Forms
 
             chkGrantOption = new CheckBox
             {
-                Text = "WITH GRANT OPTION (nguoi duoc cap co the cap lai cho nguoi khac)",
+                Text = "WITH GRANT OPTION (người được cấp có thể cấp lại cho người khác)",
                 Location = new Point(10, 430),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9f),
@@ -190,7 +190,7 @@ namespace OracleAdminApp.Forms
             };
             scrollPanel.Controls.Add(chkGrantOption);
 
-            btnGrant = UIHelper.CreateButton("THUC HIEN CAP QUYEN", ButtonStyle.Success);
+            btnGrant = UIHelper.CreateButton("THỰC HIỆN CẤP QUYỀN", ButtonStyle.Success);
             btnGrant.Size = new Size(210, 38);
             btnGrant.Location = new Point(500, 425);
             btnGrant.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
@@ -206,13 +206,13 @@ namespace OracleAdminApp.Forms
             };
             scrollPanel.Controls.Add(lblStatus1);
 
-            cardGridAllObject = UIHelper.CreateCard(10, 510, 700, 190, "QUYEN OBJECT HIEN TAI");
+            cardGridAllObject = UIHelper.CreateCard(10, 510, 700, 190, "QUYỀN OBJECT HIỆN TẠI");
             scrollPanel.Controls.Add(cardGridAllObject);
 
             dgvObjectPrivileges = CreateGrid(new Size(680, 150), new Point(10, 30));
             cardGridAllObject.Controls.Add(dgvObjectPrivileges);
 
-            cardGridGrantOptionObject = UIHelper.CreateCard(720, 510, 520, 190, "CAC DONG CO WITH GRANT OPTION");
+            cardGridGrantOptionObject = UIHelper.CreateCard(720, 510, 520, 190, "CÁC DÒNG CÓ WITH GRANT OPTION");
             scrollPanel.Controls.Add(cardGridGrantOptionObject);
 
             dgvGrantOptionOnly = CreateGrid(new Size(500, 150), new Point(10, 30));
@@ -234,11 +234,11 @@ namespace OracleAdminApp.Forms
             scrollPanel.AutoScrollMinSize = new Size(1260, 560);
             tabRoleToUser.Controls.Add(scrollPanel);
 
-            var card = UIHelper.CreateCard(10, 10, 700, 200, "CAP ROLE CHO USER");
+            var card = UIHelper.CreateCard(10, 10, 700, 200, "CẤP ROLE CHO USER");
             scrollPanel.Controls.Add(card);
 
-            UIHelper.CreateLabeledCombo(card, "Role can cap", 10, 32, 300, out cmbRoleToAssign);
-            UIHelper.CreateLabeledCombo(card, "Cap cho User", 330, 32, 330, out cmbRoleGrantee);
+            UIHelper.CreateLabeledCombo(card, "Role cần cấp", 10, 32, 300, out cmbRoleToAssign);
+            UIHelper.CreateLabeledCombo(card, "Cấp cho User", 330, 32, 330, out cmbRoleGrantee);
 
             cmbRoleGrantee.SelectedIndexChanged += (s, e) =>
             {
@@ -248,7 +248,7 @@ namespace OracleAdminApp.Forms
 
             chkAdminOption = new CheckBox
             {
-                Text = "WITH ADMIN OPTION (user co the cap role nay cho nguoi khac)",
+                Text = "WITH ADMIN OPTION (user có thể cấp role này cho người khác)",
                 Location = new Point(10, 90),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9f),
@@ -265,8 +265,8 @@ namespace OracleAdminApp.Forms
             };
             infoPanel.Controls.Add(new Label
             {
-                Text = "WITH ADMIN OPTION cho phep nguoi nhan role tiep tuc cap role do\n" +
-                       "cho user hoac role khac. Tuong tu WITH GRANT OPTION nhung cho role.",
+                Text = "WITH ADMIN OPTION cho phép người nhận role tiếp tục cấp role đó\n" +
+                       "cho user hoặc role khác. Tương tự WITH GRANT OPTION nhưng cho role.",
                 Location = new Point(8, 6),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 8.5f),
@@ -274,7 +274,7 @@ namespace OracleAdminApp.Forms
             });
             card.Controls.Add(infoPanel);
 
-            btnGrantRole = UIHelper.CreateButton("CAP ROLE", ButtonStyle.Success);
+            btnGrantRole = UIHelper.CreateButton("CẤP ROLE", ButtonStyle.Success);
             btnGrantRole.Size = new Size(130, 38);
             btnGrantRole.Location = new Point(580, 220);
             btnGrantRole.Click += BtnGrantRole_Click;
@@ -289,13 +289,13 @@ namespace OracleAdminApp.Forms
             };
             scrollPanel.Controls.Add(lblStatus2);
 
-            var cardGridAll = UIHelper.CreateCard(10, 275, 700, 220, "ROLE HIEN TAI CUA USER");
+            var cardGridAll = UIHelper.CreateCard(10, 275, 700, 220, "ROLE HIỆN TẠI CỦA USER");
             scrollPanel.Controls.Add(cardGridAll);
 
             dgvRolePrivileges = CreateGrid(new Size(680, 180), new Point(10, 30));
             cardGridAll.Controls.Add(dgvRolePrivileges);
 
-            var cardGridAdminOnly = UIHelper.CreateCard(720, 275, 520, 220, "CAC DONG CO WITH ADMIN OPTION");
+            var cardGridAdminOnly = UIHelper.CreateCard(720, 275, 520, 220, "CÁC DÒNG CÓ WITH ADMIN OPTION");
             scrollPanel.Controls.Add(cardGridAdminOnly);
 
             dgvAdminOptionOnly = CreateGrid(new Size(500, 180), new Point(10, 30));
@@ -502,7 +502,7 @@ namespace OracleAdminApp.Forms
                 ExecuteReaderToCombo(cmbGrantee, query);
             }
 
-            UIHelper.SetStatus(lblStatus1, "Da tai danh sach " + granteeType, StatusType.Success);
+            UIHelper.SetStatus(lblStatus1, "Đã tải danh sách " + granteeType, StatusType.Success);
         }
 
         private void LoadObjectOwners()
@@ -607,7 +607,7 @@ namespace OracleAdminApp.Forms
                 }
                 catch (Exception ex)
                 {
-                    UIHelper.SetStatus(lblStatus1, "Loi tai danh sach cot: " + ex.Message, StatusType.Error);
+                    UIHelper.SetStatus(lblStatus1, "Lỗi tải danh sách cột: " + ex.Message, StatusType.Error);
                 }
             }
         }
@@ -780,13 +780,13 @@ namespace OracleAdminApp.Forms
         {
             if (cmbGrantee.SelectedItem == null || cmbObjectName.SelectedItem == null)
             {
-                UIHelper.SetStatus(lblStatus1, "Vui long chon day du thong tin!", StatusType.Warning);
+                UIHelper.SetStatus(lblStatus1, "Vui lòng chọn đầy đủ thông tin!", StatusType.Warning);
                 return;
             }
 
             if (clbPrivileges.CheckedItems.Count == 0)
             {
-                UIHelper.SetStatus(lblStatus1, "Vui long chon it nhat mot quyen!", StatusType.Warning);
+                UIHelper.SetStatus(lblStatus1, "Vui lòng chọn ít nhất một quyền!", StatusType.Warning);
                 return;
             }
 
@@ -846,13 +846,13 @@ namespace OracleAdminApp.Forms
 
                 UIHelper.SetStatus(
                     lblStatus1,
-                    "Da cap quyen thanh cong cho " + grantee + " tren " + objOwner + "." + objName + grantInfo,
+                    "Đã cấp quyền thành công cho " + grantee + " trên " + objOwner + "." + objName + grantInfo,
                     StatusType.Success
                 );
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus1, "Loi cap quyen: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus1, "Lỗi cấp quyền: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -863,7 +863,7 @@ namespace OracleAdminApp.Forms
 
             if (string.IsNullOrEmpty(role) || string.IsNullOrEmpty(grantee))
             {
-                UIHelper.SetStatus(lblStatus2, "Vui long chon day du thong tin!", StatusType.Warning);
+                UIHelper.SetStatus(lblStatus2, "Vui lòng chọn đầy đủ thông tin!", StatusType.Warning);
                 return;
             }
 
@@ -895,13 +895,13 @@ namespace OracleAdminApp.Forms
 
                 UIHelper.SetStatus(
                     lblStatus2,
-                    "Da cap role " + role + " cho " + grantee + adminInfo,
+                    "Đã cấp role " + role + " cho " + grantee + adminInfo,
                     StatusType.Success
                 );
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus2, "Loi cap role: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus2, "Lỗi cấp role: " + ex.Message, StatusType.Error);
             }
         }
     }

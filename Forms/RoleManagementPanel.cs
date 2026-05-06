@@ -28,8 +28,8 @@ namespace OracleAdminApp.Forms
             this.BackColor = UIHelper.LightBg;
 
             var header = UIHelper.CreateSectionHeader(
-                "Quan ly Role",
-                "Tao moi, xoa role va xem danh sach role trong he thong");
+                "Quản lý Role",
+                "Tạo mới, xóa role và xem danh sách role trong hệ thống");
 
             var pnlToolbar = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.Transparent };
 
@@ -42,9 +42,9 @@ namespace OracleAdminApp.Forms
             };
             txtSearch.TextChanged += (s, e) => FilterGrid();
 
-            btnRefresh = UIHelper.CreateButton("Lam moi",    ButtonStyle.Secondary);
-            btnCreate  = UIHelper.CreateButton("+ Tao Role", ButtonStyle.Primary);
-            btnDelete  = UIHelper.CreateButton("Xoa Role",   ButtonStyle.Danger);
+            btnRefresh = UIHelper.CreateButton("Làm mới",    ButtonStyle.Secondary);
+            btnCreate  = UIHelper.CreateButton("+ Tạo Role", ButtonStyle.Primary);
+            btnDelete  = UIHelper.CreateButton("Xóa Role",   ButtonStyle.Danger);
 
             btnRefresh.Location = new Point(215, 8); btnRefresh.Width = 90;
             btnCreate.Location  = new Point(311, 8); btnCreate.Width  = 100;
@@ -67,8 +67,8 @@ namespace OracleAdminApp.Forms
             };
 
             dgvRoles = UIHelper.CreateGrid();
-            dgvRoles.Columns.Add(new DataGridViewTextBoxColumn { Name = "ROLE",              HeaderText = "Ten Role",       FillWeight = 30 });
-            dgvRoles.Columns.Add(new DataGridViewTextBoxColumn { Name = "AUTHENTICATION",    HeaderText = "Xac thuc",       FillWeight = 20 });
+            dgvRoles.Columns.Add(new DataGridViewTextBoxColumn { Name = "ROLE",              HeaderText = "Tên Role",       FillWeight = 30 });
+            dgvRoles.Columns.Add(new DataGridViewTextBoxColumn { Name = "AUTHENTICATION",    HeaderText = "Xác thực",       FillWeight = 20 });
             dgvRoles.Columns.Add(new DataGridViewTextBoxColumn { Name = "COMMON",            HeaderText = "Common Role",    FillWeight = 15 });
             dgvRoles.Columns.Add(new DataGridViewTextBoxColumn { Name = "ORACLE_MAINTAINED", HeaderText = "Oracle Built-in",FillWeight = 15 });
 
@@ -86,7 +86,7 @@ namespace OracleAdminApp.Forms
         // Lấy thêm COMMON, ORACLE_MAINTAINED từ DBA_ROLES để hiển thị đủ cột
         private void LoadData()
         {
-            UIHelper.SetStatus(lblStatus, "Dang tai du lieu...", StatusType.Info);
+            UIHelper.SetStatus(lblStatus, "Đang tải dữ liệu...", StatusType.Info);
             dgvRoles.Rows.Clear();
 
             try
@@ -118,11 +118,11 @@ namespace OracleAdminApp.Forms
                     }
                 }
 
-                UIHelper.SetStatus(lblStatus, dgvRoles.Rows.Count + " role trong he thong.", StatusType.Success);
+                UIHelper.SetStatus(lblStatus, dgvRoles.Rows.Count + " role trong hệ thống.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -152,7 +152,7 @@ namespace OracleAdminApp.Forms
             string role = dgvRoles.SelectedRows[0].Cells["ROLE"].Value?.ToString();
 
             if (MessageBox.Show(
-                    "Xac nhan xoa role \"" + role + "\"?", "Xac nhan",
+                    "Xác nhận xóa role \"" + role + "\"?", "Xác nhận",
                     MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                 return;
 
@@ -169,12 +169,12 @@ namespace OracleAdminApp.Forms
                         cmd.ExecuteNonQuery();
                     }
                 }
-                UIHelper.SetStatus(lblStatus, "Da xoa role " + role, StatusType.Success);
+                UIHelper.SetStatus(lblStatus, "Đã xóa role " + role, StatusType.Success);
                 LoadData();
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
     }
@@ -198,7 +198,7 @@ namespace OracleAdminApp.Forms
 
         private void InitializeLayout()
         {
-            this.Text            = "Tao Role moi";
+            this.Text            = "Tạo Role mới";
             this.Size            = new Size(400, 300);
             this.StartPosition   = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -209,7 +209,7 @@ namespace OracleAdminApp.Forms
             var pnlTitle = new Panel { Dock = DockStyle.Top, Height = 46, BackColor = Color.FromArgb(30, 50, 80) };
             pnlTitle.Controls.Add(new Label
             {
-                Text      = "+ Tao Role moi",
+                Text      = "+ Tạo Role mới",
                 ForeColor = Color.White,
                 Font      = new Font("Segoe UI", 11f, FontStyle.Bold),
                 AutoSize  = true,
@@ -218,15 +218,15 @@ namespace OracleAdminApp.Forms
 
             var card = UIHelper.CreateCard(15, 55, 360, 155);
 
-            UIHelper.CreateLabeledInput(card, "Ten Role *", 10, 10, 330, out txtRoleName);
+            UIHelper.CreateLabeledInput(card, "Tên Role *", 10, 10, 330, out txtRoleName);
 
-            UIHelper.CreateLabeledCombo(card, "Kieu xac thuc", 10, 62, 160, out cmbAuth);
+            UIHelper.CreateLabeledCombo(card, "Kiểu xác thực", 10, 62, 160, out cmbAuth);
             cmbAuth.Items.AddRange(new object[] { "NOT IDENTIFIED", "BY PASSWORD" });
             cmbAuth.SelectedIndex = 0;
             cmbAuth.SelectedIndexChanged += (s, e) =>
                 txtPassword.Visible = cmbAuth.SelectedIndex == 1;
 
-            UIHelper.CreateLabeledInput(card, "Mat khau", 190, 62, 150, out txtPassword, true);
+            UIHelper.CreateLabeledInput(card, "Mật khẩu", 190, 62, 150, out txtPassword, true);
             txtPassword.Visible = false;
 
             // Status label
@@ -239,13 +239,13 @@ namespace OracleAdminApp.Forms
             };
 
             // Buttons
-            btnCancel           = UIHelper.CreateButton("Huy", ButtonStyle.Secondary);
+            btnCancel           = UIHelper.CreateButton("Hủy", ButtonStyle.Secondary);
             btnCancel.Size      = new Size(80, 34);
             btnCancel.Location  = new Point(185, 235);
             btnCancel.ForeColor = UIHelper.TextDark;
             btnCancel.Click    += (s, e) => { this.DialogResult = DialogResult.Cancel; this.Close(); };
 
-            btnSave          = UIHelper.CreateButton("+ Tao", ButtonStyle.Primary);
+            btnSave          = UIHelper.CreateButton("+ Tạo", ButtonStyle.Primary);
             btnSave.Size     = new Size(100, 34);
             btnSave.Location = new Point(275, 235);
             btnSave.Click   += BtnSave_Click;
@@ -265,14 +265,14 @@ namespace OracleAdminApp.Forms
         {
             if (string.IsNullOrWhiteSpace(txtRoleName.Text))
             {
-                UIHelper.SetStatus(lblStatus, "Vui long nhap ten role.", StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Vui lòng nhập tên role.", StatusType.Error);
                 return;
             }
 
             // Kiểm tra mật khẩu khi chọn BY PASSWORD
             if (cmbAuth.SelectedIndex == 1 && string.IsNullOrWhiteSpace(txtPassword.Text))
             {
-                UIHelper.SetStatus(lblStatus, "Vui long nhap mat khau cho role.", StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Vui lòng nhập mật khẩu cho role.", StatusType.Error);
                 return;
             }
 
@@ -311,7 +311,7 @@ namespace OracleAdminApp.Forms
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
     }

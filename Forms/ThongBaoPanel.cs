@@ -40,8 +40,8 @@ namespace OracleAdminApp.Forms
 
             // Header
             var header = UIHelper.CreateSectionHeader(
-                "Thong bao",
-                "Cac thong bao duoc gui den ban (Oracle Label Security tu dong loc theo quyen)");
+                "Thông báo",
+                "Các thông báo được gửi đến bạn (Oracle Label Security tự động lọc theo quyền)");
             this.Controls.Add(header);
 
             // Panel toolbar (Dock Top)
@@ -52,7 +52,7 @@ namespace OracleAdminApp.Forms
                 BackColor = Color.Transparent
             };
 
-            btnRefresh           = UIHelper.CreateButton("Lam moi", ButtonStyle.Secondary);
+            btnRefresh           = UIHelper.CreateButton("Làm mới", ButtonStyle.Secondary);
             btnRefresh.Size      = new Size(100, 34);
             btnRefresh.Location  = new Point(0, 5);
             btnRefresh.ForeColor = UIHelper.TextDark;
@@ -83,25 +83,25 @@ namespace OracleAdminApp.Forms
             dgvThongBao.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name       = "MATHONGBAO",
-                HeaderText = "Ma TB",
+                HeaderText = "Mã TB",
                 FillWeight = 8
             });
             dgvThongBao.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name       = "NOIDUNG",
-                HeaderText = "Noi dung thong bao",
+                HeaderText = "Nội dung thông báo",
                 FillWeight = 55
             });
             dgvThongBao.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name       = "NGAYGIOGIO",
-                HeaderText = "Ngay gio",
+                HeaderText = "Ngày giờ",
                 FillWeight = 17
             });
             dgvThongBao.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name       = "DIADIEM",
-                HeaderText = "Dia diem",
+                HeaderText = "Địa điểm",
                 FillWeight = 20
             });
 
@@ -129,7 +129,7 @@ namespace OracleAdminApp.Forms
         // ================================================================
         public void LoadThongBao()
         {
-            UIHelper.SetStatus(lblStatus, "Dang tai thong bao...", StatusType.Info);
+            UIHelper.SetStatus(lblStatus, "Đang tải thông báo...", StatusType.Info);
             dgvThongBao.Rows.Clear();
 
             try
@@ -162,16 +162,16 @@ namespace OracleAdminApp.Forms
 
                 int count = dgvThongBao.Rows.Count;
                 UIHelper.SetStatus(lblStatus,
-                    count + " thong bao duoc gui den ban.",
+                    count + " thông báo được gửi đến bạn.",
                     StatusType.Success);
 
                 lblInfo.Text = count == 0
-                    ? "Ban khong co thong bao nao."
-                    : "Hien thi " + count + " thong bao phu hop voi quyen cua ban.";
+                    ? "Bạn không có thông báo nào."
+                    : "Hiển thị " + count + " thông báo phù hợp với quyền của bạn.";
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
     }

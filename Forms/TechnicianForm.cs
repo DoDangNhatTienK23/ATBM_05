@@ -32,28 +32,28 @@ namespace OracleAdminApp.Forms
 
         private void InitializeLayout()
         {
-            this.Text = "Ky Thuat Vien - " + _username;
+            this.Text = "Kỹ thuật viên - " + _username;
             this.Size = new Size(1000, 700);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = UIHelper.LightBg;
 
             tabControl = new TabControl { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 10f) };
 
-            var tabServices = new TabPage("  Dich vu duoc phan cong (TC#4)  ") { BackColor = UIHelper.LightBg };
+            var tabServices = new TabPage("  Dịch vụ được phân công (TC#4)  ") { BackColor = UIHelper.LightBg };
             BuildServicesTab(tabServices);
 
-            var tabProfile = new TabPage("  Thong tin ca nhan (TC#5)  ") { BackColor = UIHelper.LightBg };
+            var tabProfile = new TabPage("  Thông tin cá nhân (TC#5)  ") { BackColor = UIHelper.LightBg };
             BuildProfileTab(tabProfile);
 
             tabControl.TabPages.Add(tabServices);
             tabControl.TabPages.Add(tabProfile);
 
-            var tabThongBao = new TabPage("  Thong bao  ") { BackColor = UIHelper.LightBg };
+            var tabThongBao = new TabPage("  Thông báo  ") { BackColor = UIHelper.LightBg };
             tabThongBao.Controls.Add(new ThongBaoPanel(_connStr));
             tabControl.TabPages.Add(tabThongBao);
 
             var pnlBottom = new Panel { Dock = DockStyle.Bottom, Height = 60, BackColor = Color.White };
-            var btnLogout = UIHelper.CreateButton("Dang xuat", ButtonStyle.Secondary);
+            var btnLogout = UIHelper.CreateButton("Đăng xuất", ButtonStyle.Secondary);
             btnLogout.Location = new Point(20, 10);
             btnLogout.Click += (s, e) => { this.Close(); new LoginForm().Show(); };
             pnlBottom.Controls.Add(btnLogout);
@@ -67,7 +67,10 @@ namespace OracleAdminApp.Forms
         // ========================================================
         private void BuildServicesTab(TabPage page)
         {
-            var pnlTop = UIHelper.CreateCard(10, 10, 950, 350, "DANH SACH CHI DINH DICH VU");
+            page.AutoScroll = true;
+            page.AutoScrollMinSize = new Size(980, 620);
+
+            var pnlTop = UIHelper.CreateCard(10, 10, 950, 350, "DANH SÁCH CHỈ ĐỊNH DỊCH VỤ");
             dgvServices = UIHelper.CreateGrid();
             dgvServices.Dock = DockStyle.Fill;
             dgvServices.CellClick += DgvServices_CellClick;
@@ -78,14 +81,13 @@ namespace OracleAdminApp.Forms
             pnlTop.Controls.Add(dgvServices);
             page.Controls.Add(pnlTop);
 
-            var pnlEdit = UIHelper.CreateCard(10, 370, 950, 200, "CAP NHAT KET QUA");
+            var pnlEdit = UIHelper.CreateCard(10, 370, 950, 200, "CẬP NHẬT KẾT QUẢ");
             page.Controls.Add(pnlEdit);
 
-            UIHelper.CreateLabeledInput(pnlEdit, "NHAP KET QUA DICH VU TAI DAY", 20, 35, 910, out txtKetQua);
-            txtKetQua.Multiline = true;
-            txtKetQua.Height = 80;
+            UIHelper.CreateLabeledInput(pnlEdit, "NHẬP KẾT QUẢ DỊCH VỤ TẠI ĐÂY", 20, 35, 910, out txtKetQua);
+            UIHelper.ConfigureMemo(txtKetQua, 80);
 
-            var btnSave = UIHelper.CreateButton("LUU KET QUA", ButtonStyle.Success);
+            var btnSave = UIHelper.CreateButton("LƯU KẾT QUẢ", ButtonStyle.Success);
             btnSave.Location = new Point(730, 145);
             btnSave.Size = new Size(200, 40);
             btnSave.Click += BtnSave_Click;
@@ -116,7 +118,7 @@ namespace OracleAdminApp.Forms
                     dgvServices.ReadOnly = true;
                 }
             }
-            catch (Exception ex) { MessageBox.Show("Error loading grid: " + ex.Message); }
+            catch (Exception ex) { MessageBox.Show("Lỗi tải danh sách: " + ex.Message); }
         }
 
         // Apply formatting & restrict sorting here to bypass WinForms auto-reset
@@ -187,7 +189,7 @@ namespace OracleAdminApp.Forms
                         cmd.Parameters.Add("type", loaiDV);
                         cmd.Parameters.Add("d", ngayDV);
                         cmd.ExecuteNonQuery();
-                        UIHelper.SetStatus(lblStatus, "Da cap nhat ket qua thanh cong!", StatusType.Success);
+                        UIHelper.SetStatus(lblStatus, "Đã cập nhật kết quả thành công!", StatusType.Success);
                         LoadServices();
                     }
                 }
@@ -200,30 +202,30 @@ namespace OracleAdminApp.Forms
         // ========================================================
         private void BuildProfileTab(TabPage page)
         {
-            var cardBasic = UIHelper.CreateCard(15, 15, 940, 160, "THONG TIN CO BAN (CHEO)");
+            var cardBasic = UIHelper.CreateCard(15, 15, 940, 160, "THÔNG TIN CƠ BẢN (CHÉO)");
             page.Controls.Add(cardBasic);
 
-            UIHelper.CreateLabeledInput(cardBasic, "Ma NV", 20, 40, 150, out txtMaNV);
-            UIHelper.CreateLabeledInput(cardBasic, "Ho ten", 190, 40, 250, out txtHoTen);
-            UIHelper.CreateLabeledInput(cardBasic, "Phai", 460, 40, 100, out txtPhai);
-            UIHelper.CreateLabeledInput(cardBasic, "Ngay Sinh", 580, 40, 150, out txtNgaySinh);
+            UIHelper.CreateLabeledInput(cardBasic, "Mã NV", 20, 40, 150, out txtMaNV);
+            UIHelper.CreateLabeledInput(cardBasic, "Họ tên", 190, 40, 250, out txtHoTen);
+            UIHelper.CreateLabeledInput(cardBasic, "Phái", 460, 40, 100, out txtPhai);
+            UIHelper.CreateLabeledInput(cardBasic, "Ngày sinh", 580, 40, 150, out txtNgaySinh);
             UIHelper.CreateLabeledInput(cardBasic, "CMND/CCCD", 750, 40, 170, out txtCMND);
 
-            UIHelper.CreateLabeledInput(cardBasic, "Vai tro", 20, 100, 250, out txtVaiTro);
-            UIHelper.CreateLabeledInput(cardBasic, "Chuyen khoa", 290, 100, 250, out txtChuyenKhoa);
+            UIHelper.CreateLabeledInput(cardBasic, "Vai trò", 20, 100, 250, out txtVaiTro);
+            UIHelper.CreateLabeledInput(cardBasic, "Chuyên khoa", 290, 100, 250, out txtChuyenKhoa);
 
             // Read-only fields
             txtMaNV.ReadOnly = txtHoTen.ReadOnly = txtPhai.ReadOnly = txtNgaySinh.ReadOnly =
             txtCMND.ReadOnly = txtVaiTro.ReadOnly = txtChuyenKhoa.ReadOnly = true;
 
-            var cardEdit = UIHelper.CreateCard(15, 190, 940, 140, "THONG TIN LIEN LAC (DUOC SUA)");
+            var cardEdit = UIHelper.CreateCard(15, 190, 940, 140, "THÔNG TIN LIÊN LẠC (ĐƯỢC SỬA)");
             page.Controls.Add(cardEdit);
 
-            UIHelper.CreateLabeledInput(cardEdit, "Que Quan", 20, 40, 450, out txtQueQuan);
-            UIHelper.CreateLabeledInput(cardEdit, "So Dien Thoai", 490, 40, 250, out txtSoDT);
+            UIHelper.CreateLabeledInput(cardEdit, "Quê quán", 20, 40, 450, out txtQueQuan);
+            UIHelper.CreateLabeledInput(cardEdit, "Số điện thoại", 490, 40, 250, out txtSoDT);
 
             // Moved button down to avoid overlap & adjusted size
-            var btnUpdateProfile = UIHelper.CreateButton("CAP NHAT LIEN LAC", ButtonStyle.Primary);
+            var btnUpdateProfile = UIHelper.CreateButton("CẬP NHẬT LIÊN LẠC", ButtonStyle.Primary);
             btnUpdateProfile.Location = new Point(560, 90);
             btnUpdateProfile.Size = new Size(180, 35);
             btnUpdateProfile.Click += BtnUpdateProfile_Click;
@@ -263,7 +265,7 @@ namespace OracleAdminApp.Forms
                     }
                 }
             }
-            catch (Exception ex) { UIHelper.SetStatus(lblProfileStatus, "Error: " + ex.Message, StatusType.Error); }
+            catch (Exception ex) { UIHelper.SetStatus(lblProfileStatus, "Lỗi: " + ex.Message, StatusType.Error); }
         }
 
         private void BtnUpdateProfile_Click(object sender, EventArgs e)
@@ -279,11 +281,11 @@ namespace OracleAdminApp.Forms
                         cmd.Parameters.Add("qq", txtQueQuan.Text);
                         cmd.Parameters.Add("sdt", txtSoDT.Text);
                         cmd.ExecuteNonQuery();
-                        UIHelper.SetStatus(lblProfileStatus, "Profile updated successfully!", StatusType.Success);
+                        UIHelper.SetStatus(lblProfileStatus, "Đã cập nhật hồ sơ thành công!", StatusType.Success);
                     }
                 }
             }
-            catch (Exception ex) { UIHelper.SetStatus(lblProfileStatus, "Error: " + ex.Message, StatusType.Error); }
+            catch (Exception ex) { UIHelper.SetStatus(lblProfileStatus, "Lỗi: " + ex.Message, StatusType.Error); }
         }
     }
 }

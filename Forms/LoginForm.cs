@@ -6,11 +6,14 @@ namespace OracleAdminApp.Forms
 {
     public class LoginForm : Form
     {
-        private TextBox txtHost, txtPort, txtService, txtUsername, txtPassword;
+        private const string DefaultHost = "localhost";
+        private const string DefaultPort = "1521";
+        private const string DefaultService = "XEPDB1";
+
+        private TextBox txtUsername, txtPassword;
         private Button btnConnect;
         private Label lblStatus;
         private Panel pnlCard;
-        private CheckBox chkSysDba;
 
         public LoginForm()
         {
@@ -19,105 +22,110 @@ namespace OracleAdminApp.Forms
 
         private void InitializeLayout()
         {
-            this.Text = "Oracle DB Admin – Đăng nhập";
-            this.Size = new Size(460, 620);
+            this.Text = "Oracle Hospital Security - Đăng nhập";
+            this.Size = new Size(440, 560);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
-            this.BackColor = Color.FromArgb(30, 50, 80);
+            this.BackColor = Color.FromArgb(18, 32, 47);
             this.Font = new Font("Segoe UI", 9.5f);
 
             // Logo/Title area
             var pnlTop = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 110,
+                Height = 150,
                 BackColor = Color.Transparent
             };
             var lblLogo = new Label
             {
-                Text = "⚙",
-                Font = new Font("Segoe UI", 32f),
-                ForeColor = Color.FromArgb(100, 160, 255),
-                AutoSize = true,
-                Location = new Point(190, 18)
+                Text = "+",
+                Font = new Font("Segoe UI", 28f, FontStyle.Bold),
+                ForeColor = Color.White,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Size = new Size(58, 58),
+                Location = new Point(185, 24),
+                BackColor = Color.FromArgb(34, 142, 112)
             };
             var lblAppName = new Label
             {
-                Text = "Oracle DB Admin Tool",
-                Font = new Font("Segoe UI", 13f, FontStyle.Bold),
+                Text = "Hospital Security",
+                Font = new Font("Segoe UI", 16f, FontStyle.Bold),
                 ForeColor = Color.White,
-                AutoSize = true,
-                Location = new Point(120, 68)
+                TextAlign = ContentAlignment.MiddleCenter,
+                Size = new Size(360, 30),
+                Location = new Point(35, 88)
+            };
+            var lblSubtitle = new Label
+            {
+                Text = "Đăng nhập hệ thống Oracle",
+                Font = new Font("Segoe UI", 9.5f),
+                ForeColor = Color.FromArgb(177, 193, 211),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Size = new Size(360, 24),
+                Location = new Point(35, 118)
             };
             pnlTop.Controls.Add(lblLogo);
             pnlTop.Controls.Add(lblAppName);
+            pnlTop.Controls.Add(lblSubtitle);
 
             // Card panel
             pnlCard = new Panel
             {
-                BackColor = Color.White,
-                Size = new Size(380, 420),
-                Location = new Point(38, 120)
+                BackColor = Color.FromArgb(248, 251, 253),
+                Size = new Size(360, 275),
+                Location = new Point(36, 155)
             };
             RoundPanel(pnlCard);
 
-            int y = 22;
-            // Host
-            AddFormRow(pnlCard, "Host / IP", ref y, out txtHost);
-            txtHost.Text = "localhost";
-            // Port
-            AddFormRow(pnlCard, "Port", ref y, out txtPort);
-            txtPort.Text = "1521";
-            // Service Name
-            AddFormRow(pnlCard, "Service Name", ref y, out txtService);
-            txtService.Text = "XEPDB1";
+            int y = 26;
             // Username
-            AddFormRow(pnlCard, "Username", ref y, out txtUsername);
-            txtUsername.Text = "SYSTEM";
+            AddFormRow(pnlCard, "Tên đăng nhập", ref y, out txtUsername);
+            txtUsername.Text = "BVDBA";
             // Password
-            AddFormRow(pnlCard, "Password", ref y, out txtPassword);
-            txtPassword.PasswordChar = '●';
-
-            // SYSDBA checkbox
-            chkSysDba = new CheckBox
-            {
-                Text = "Kết nối với quyền SYSDBA",
-                Location = new Point(20, y),
-                AutoSize = true,
-                ForeColor = Color.FromArgb(80, 100, 130),
-                Font = new Font("Segoe UI", 9f)
-            };
-            pnlCard.Controls.Add(chkSysDba);
-            y += 30;
+            AddFormRow(pnlCard, "Mật khẩu", ref y, out txtPassword);
+            txtPassword.PasswordChar = '*';
 
             // Connect button
             btnConnect = new Button
             {
-                Text = "KẾT NỐI",
-                Size = new Size(340, 42),
-                Location = new Point(20, y + 5),
+                Text = "ĐĂNG NHẬP",
+                Size = new Size(310, 44),
+                Location = new Point(25, y + 12),
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(30, 90, 200),
+                BackColor = Color.FromArgb(34, 142, 112),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             btnConnect.FlatAppearance.BorderSize = 0;
-            btnConnect.MouseEnter += (s, e) => btnConnect.BackColor = Color.FromArgb(20, 70, 170);
-            btnConnect.MouseLeave += (s, e) => btnConnect.BackColor = Color.FromArgb(30, 90, 200);
+            btnConnect.MouseEnter += (s, e) => btnConnect.BackColor = Color.FromArgb(26, 121, 96);
+            btnConnect.MouseLeave += (s, e) => btnConnect.BackColor = Color.FromArgb(34, 142, 112);
             btnConnect.Click += BtnConnect_Click;
             pnlCard.Controls.Add(btnConnect);
+
+            var lblConnection = new Label
+            {
+                Text = $"Kết nối mặc định: {DefaultHost}:{DefaultPort}/{DefaultService}",
+                AutoSize = false,
+                Size = new Size(310, 22),
+                Location = new Point(25, y + 65),
+                TextAlign = ContentAlignment.MiddleCenter,
+                ForeColor = Color.FromArgb(102, 117, 135),
+                Font = new Font("Segoe UI", 8.5f),
+                BackColor = Color.Transparent
+            };
+            pnlCard.Controls.Add(lblConnection);
 
             // Status label
             lblStatus = new Label
             {
                 Text = "",
                 AutoSize = false,
-                Size = new Size(380, 24),
-                Location = new Point(38, 555),
+                Size = new Size(360, 54),
+                Location = new Point(36, 445),
                 TextAlign = ContentAlignment.MiddleCenter,
-                ForeColor = Color.FromArgb(255, 180, 80),
+                ForeColor = Color.FromArgb(245, 177, 83),
                 Font = new Font("Segoe UI", 9f),
                 BackColor = Color.Transparent
             };
@@ -135,23 +143,24 @@ namespace OracleAdminApp.Forms
             var lbl = new Label
             {
                 Text = labelText,
-                Location = new Point(20, y),
+                Location = new Point(25, y),
                 AutoSize = true,
-                ForeColor = Color.FromArgb(90, 110, 140),
-                Font = new Font("Segoe UI", 8.5f)
+                ForeColor = Color.FromArgb(74, 91, 109),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold)
             };
-            y += 20;
+            y += 23;
             txt = new TextBox
             {
-                Location = new Point(20, y),
-                Size = new Size(340, 28),
+                Location = new Point(25, y),
+                Size = new Size(310, 30),
                 BorderStyle = BorderStyle.FixedSingle,
-                Font = new Font("Segoe UI", 10f),
-                BackColor = Color.FromArgb(248, 250, 255)
+                Font = new Font("Segoe UI", 10.5f),
+                BackColor = Color.White,
+                ForeColor = Color.FromArgb(27, 43, 59)
             };
             parent.Controls.Add(lbl);
             parent.Controls.Add(txt);
-            y += 40;
+            y += 52;
         }
 
         private void RoundPanel(Panel p)
@@ -164,18 +173,21 @@ namespace OracleAdminApp.Forms
         {
             if (string.IsNullOrWhiteSpace(txtUsername.Text) || string.IsNullOrWhiteSpace(txtPassword.Text))
             {
-                ShowStatus("⚠ Vui lòng nhập đầy đủ thông tin!", Color.FromArgb(255, 150, 50));
+                ShowStatus("Vui lòng nhập đầy đủ username và password.", Color.FromArgb(245, 177, 83));
                 return;
             }
 
             btnConnect.Enabled = false;
-            btnConnect.Text = "Đang kết nối...";
+            btnConnect.Text = "ĐANG KẾT NỐI...";
             lblStatus.Text = "";
 
-            string dbaMode = chkSysDba.Checked ? ";DBA Privilege=SYSDBA" : "";
+            string loginUsername = txtUsername.Text.Trim();
+            string dbaMode = loginUsername.Equals("SYS", StringComparison.OrdinalIgnoreCase)
+                ? ";DBA Privilege=SYSDBA"
+                : "";
             string connStr = $"User Id={txtUsername.Text.Trim()};" +
                              $"Password={txtPassword.Text};" +
-                             $"Data Source={txtHost.Text.Trim()}:{txtPort.Text.Trim()}/{txtService.Text.Trim()}" +
+                             $"Data Source={DefaultHost}:{DefaultPort}/{DefaultService}" +
                              dbaMode;
 
             // Test connection in background
@@ -183,7 +195,7 @@ namespace OracleAdminApp.Forms
             {
                 string error = null;
                 string userRole = null; // Biến lưu vai trò của người dùng
-                string upperUsername = txtUsername.Text.Trim().ToUpper();
+                string upperUsername = loginUsername.ToUpper();
 
                 try
                 {
@@ -215,11 +227,11 @@ namespace OracleAdminApp.Forms
                 this.Invoke((Action)(() =>
                 {
                     btnConnect.Enabled = true;
-                    btnConnect.Text = "KẾT NỐI";
+                    btnConnect.Text = "ĐĂNG NHẬP";
 
                     if (error != null)
                     {
-                        ShowStatus($"✗ Lỗi: {error}", Color.FromArgb(255, 100, 100));
+                        ShowStatus($"Lỗi: {error}", Color.FromArgb(232, 92, 92));
                     }
                     else
                     {
@@ -260,7 +272,7 @@ namespace OracleAdminApp.Forms
                         }
                         else
                         {
-                            MessageBox.Show($"Dang nhap thanh cong nhung chua co giao dien cho vai tro: {userRole}");
+                            MessageBox.Show($"Đăng nhập thành công nhưng chưa có giao diện cho vai trò: {userRole}");
                             return; // Tam dung khong an LoginForm
                         }
 

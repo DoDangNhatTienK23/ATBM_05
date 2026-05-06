@@ -30,8 +30,8 @@ namespace OracleAdminApp.Forms
             this.Padding = new Padding(5);
 
             var header = UIHelper.CreateSectionHeader(
-                "Quan ly User",
-                "Tao moi, chinh sua, xoa tai khoan nguoi dung Oracle");
+                "Quản lý User",
+                "Tạo mới, chỉnh sửa, xóa tài khoản người dùng Oracle");
 
             // ── Toolbar ────────────────────────────────────────────────────
             var pnlToolbar = new Panel
@@ -51,12 +51,12 @@ namespace OracleAdminApp.Forms
             };
             txtSearch.TextChanged += (s, e) => FilterGrid();
 
-            btnRefresh = UIHelper.CreateButton("Lam moi",    ButtonStyle.Secondary);
-            btnCreate  = UIHelper.CreateButton("+ Tao User", ButtonStyle.Primary);
-            btnEdit    = UIHelper.CreateButton("Sua",         ButtonStyle.Warning);
-            btnDelete  = UIHelper.CreateButton("Xoa",         ButtonStyle.Danger);
-            btnLock    = UIHelper.CreateButton("Khoa",        ButtonStyle.Secondary);
-            btnUnlock  = UIHelper.CreateButton("Mo khoa",     ButtonStyle.Success);
+            btnRefresh = UIHelper.CreateButton("Làm mới",    ButtonStyle.Secondary);
+            btnCreate  = UIHelper.CreateButton("+ Tạo User", ButtonStyle.Primary);
+            btnEdit    = UIHelper.CreateButton("Sửa",         ButtonStyle.Warning);
+            btnDelete  = UIHelper.CreateButton("Xóa",         ButtonStyle.Danger);
+            btnLock    = UIHelper.CreateButton("Khóa",        ButtonStyle.Secondary);
+            btnUnlock  = UIHelper.CreateButton("Mở khóa",     ButtonStyle.Success);
 
             int bx = 215;
             Button[] toolBtns = { btnRefresh, btnCreate, btnEdit, btnDelete, btnLock, btnUnlock };
@@ -85,13 +85,13 @@ namespace OracleAdminApp.Forms
             };
 
             dgvUsers = UIHelper.CreateGrid();
-            dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "USERNAME",           HeaderText = "Ten dang nhap", FillWeight = 20 });
-            dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "ACCOUNT_STATUS",     HeaderText = "Trang thai",    FillWeight = 15 });
+            dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "USERNAME",           HeaderText = "Tên đăng nhập", FillWeight = 20 });
+            dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "ACCOUNT_STATUS",     HeaderText = "Trạng thái",    FillWeight = 15 });
             dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "DEFAULT_TABLESPACE", HeaderText = "Tablespace",    FillWeight = 15 });
             dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "PROFILE",            HeaderText = "Profile",       FillWeight = 12 });
-            dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "CREATED",            HeaderText = "Ngay tao",      FillWeight = 13 });
-            dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "EXPIRY_DATE",        HeaderText = "Ngay het han",  FillWeight = 13 });
-            dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "LOCK_DATE",          HeaderText = "Ngay khoa",     FillWeight = 12 });
+            dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "CREATED",            HeaderText = "Ngày tạo",      FillWeight = 13 });
+            dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "EXPIRY_DATE",        HeaderText = "Ngày hết hạn",  FillWeight = 13 });
+            dgvUsers.Columns.Add(new DataGridViewTextBoxColumn { Name = "LOCK_DATE",          HeaderText = "Ngày khóa",     FillWeight = 12 });
 
             dgvUsers.CellFormatting += DgvUsers_CellFormatting;
             lblStatus = UIHelper.CreateStatusLabel(pnlGrid);
@@ -124,7 +124,7 @@ namespace OracleAdminApp.Forms
         // Thêm EXPIRY_DATE, LOCK_DATE từ DBA_USERS để hiển thị đủ 7 cột
         private void LoadData()
         {
-            UIHelper.SetStatus(lblStatus, "Dang tai du lieu...", StatusType.Info);
+            UIHelper.SetStatus(lblStatus, "Đang tải dữ liệu...", StatusType.Info);
             dgvUsers.Rows.Clear();
 
             try
@@ -162,11 +162,11 @@ namespace OracleAdminApp.Forms
                     }
                 }
 
-                UIHelper.SetStatus(lblStatus, "Tong cong " + dgvUsers.Rows.Count + " user.", StatusType.Success);
+                UIHelper.SetStatus(lblStatus, "Tổng cộng " + dgvUsers.Rows.Count + " user.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -196,7 +196,7 @@ namespace OracleAdminApp.Forms
         {
             if (dgvUsers.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui long chon user can sua.", "Thong bao",
+                MessageBox.Show("Vui lòng chọn user cần sửa.", "Thông báo",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -214,8 +214,8 @@ namespace OracleAdminApp.Forms
             string username = dgvUsers.SelectedRows[0].Cells["USERNAME"].Value?.ToString();
 
             if (MessageBox.Show(
-                    "Xac nhan xoa user \"" + username + "\"?\nHanh dong nay khong the hoan tac!",
-                    "Xac nhan xoa", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                    "Xác nhận xóa user \"" + username + "\"?\nHành động này không thể hoàn tác!",
+                    "Xác nhận xóa", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                 return;
 
             try
@@ -231,12 +231,12 @@ namespace OracleAdminApp.Forms
                         cmd.ExecuteNonQuery();
                     }
                 }
-                UIHelper.SetStatus(lblStatus, "Da xoa user " + username, StatusType.Success);
+                UIHelper.SetStatus(lblStatus, "Đã xóa user " + username, StatusType.Success);
                 LoadData();
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -247,10 +247,10 @@ namespace OracleAdminApp.Forms
             if (dgvUsers.SelectedRows.Count == 0) return;
             string username = dgvUsers.SelectedRows[0].Cells["USERNAME"].Value?.ToString();
             string action   = unlock ? "UNLOCK" : "LOCK";
-            string msgVN    = unlock ? "mo khoa" : "khoa";
+            string msgVN    = unlock ? "mở khóa" : "khóa";
 
             if (MessageBox.Show(
-                    "Xac nhan " + msgVN + " user \"" + username + "\"?", "Xac nhan",
+                    "Xác nhận " + msgVN + " user \"" + username + "\"?", "Xác nhận",
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
 
@@ -268,12 +268,12 @@ namespace OracleAdminApp.Forms
                         cmd.ExecuteNonQuery();
                     }
                 }
-                UIHelper.SetStatus(lblStatus, "Da " + msgVN + " user " + username, StatusType.Success);
+                UIHelper.SetStatus(lblStatus, "Đã " + msgVN + " user " + username, StatusType.Success);
                 LoadData();
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatus, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatus, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
     }

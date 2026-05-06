@@ -45,17 +45,17 @@ namespace OracleAdminApp.Forms
 
         private void InitializeLayout()
         {
-            Text = "Bac si / Y si - " + _username;
+            Text = "Bác sĩ / Y sĩ - " + _username;
             Size = new Size(1180, 780);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = UIHelper.LightBg;
 
             tabControl = new TabControl { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 9.5f) };
 
-            var tabHSBA = new TabPage("  HSBA cua toi  ") { BackColor = UIHelper.LightBg };
-            var tabBN = new TabPage("  Benh nhan lien quan  ") { BackColor = UIHelper.LightBg };
+            var tabHSBA = new TabPage("  HSBA của tôi  ") { BackColor = UIHelper.LightBg };
+            var tabBN = new TabPage("  Bệnh nhân liên quan  ") { BackColor = UIHelper.LightBg };
             var tabDV = new TabPage("  HSBA_DV  ") { BackColor = UIHelper.LightBg };
-            var tabDT = new TabPage("  Don thuoc  ") { BackColor = UIHelper.LightBg };
+            var tabDT = new TabPage("  Đơn thuốc  ") { BackColor = UIHelper.LightBg };
 
             BuildHSBATab(tabHSBA);
             BuildBenhNhanTab(tabBN);
@@ -67,12 +67,12 @@ namespace OracleAdminApp.Forms
             tabControl.TabPages.Add(tabDV);
             tabControl.TabPages.Add(tabDT);
 
-            var tabThongBao = new TabPage("  Thong bao  ") { BackColor = UIHelper.LightBg };
+            var tabThongBao = new TabPage("  Thông báo  ") { BackColor = UIHelper.LightBg };
             tabThongBao.Controls.Add(new ThongBaoPanel(_connStr));
             tabControl.TabPages.Add(tabThongBao);
 
             var pnlBottom = new Panel { Dock = DockStyle.Bottom, Height = 55, BackColor = Color.White };
-            var btnLogout = UIHelper.CreateButton("Dang xuat", ButtonStyle.Secondary);
+            var btnLogout = UIHelper.CreateButton("Đăng xuất", ButtonStyle.Secondary);
             btnLogout.Location = new Point(15, 10);
             btnLogout.Click += (s, e) => { Close(); new LoginForm().Show(); };
             pnlBottom.Controls.Add(btnLogout);
@@ -83,7 +83,10 @@ namespace OracleAdminApp.Forms
 
         private void BuildHSBATab(TabPage page)
         {
-            var cardGrid = UIHelper.CreateCard(10, 10, 1120, 300, "DANH SACH HSBA");
+            page.AutoScroll = true;
+            page.AutoScrollMinSize = new Size(1140, 650);
+
+            var cardGrid = UIHelper.CreateCard(10, 10, 1120, 300, "DANH SÁCH HSBA");
             dgvHSBA = UIHelper.CreateGrid();
             dgvHSBA.Dock = DockStyle.Fill;
             dgvHSBA.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
@@ -91,25 +94,22 @@ namespace OracleAdminApp.Forms
             cardGrid.Controls.Add(dgvHSBA);
             page.Controls.Add(cardGrid);
 
-            var cardEdit = UIHelper.CreateCard(10, 320, 1120, 280, "CAP NHAT CHAN DOAN / DIEU TRI / KET LUAN");
+            var cardEdit = UIHelper.CreateCard(10, 320, 1120, 280, "CẬP NHẬT CHẨN ĐOÁN / ĐIỀU TRỊ / KẾT LUẬN");
             page.Controls.Add(cardEdit);
 
-            UIHelper.CreateLabeledInput(cardEdit, "Ma HSBA", 15, 30, 140, out txtHSBA_Ma);
+            UIHelper.CreateLabeledInput(cardEdit, "Mã HSBA", 15, 30, 140, out txtHSBA_Ma);
             txtHSBA_Ma.ReadOnly = true;
 
-            UIHelper.CreateLabeledInput(cardEdit, "Chan doan", 15, 80, 1080, out txtChanDoan);
-            txtChanDoan.Multiline = true;
-            txtChanDoan.Height = 45;
+            UIHelper.CreateLabeledInput(cardEdit, "Chẩn đoán", 15, 80, 1080, out txtChanDoan);
+            UIHelper.ConfigureMemo(txtChanDoan, 45);
 
-            UIHelper.CreateLabeledInput(cardEdit, "Dieu tri", 15, 140, 1080, out txtDieuTri);
-            txtDieuTri.Multiline = true;
-            txtDieuTri.Height = 45;
+            UIHelper.CreateLabeledInput(cardEdit, "Điều trị", 15, 140, 1080, out txtDieuTri);
+            UIHelper.ConfigureMemo(txtDieuTri, 45);
 
-            UIHelper.CreateLabeledInput(cardEdit, "Ket luan", 15, 200, 1080, out txtKetLuan);
-            txtKetLuan.Multiline = true;
-            txtKetLuan.Height = 45;
+            UIHelper.CreateLabeledInput(cardEdit, "Kết luận", 15, 200, 1080, out txtKetLuan);
+            UIHelper.ConfigureMemo(txtKetLuan, 45);
 
-            var btnUpdate = UIHelper.CreateButton("Cap nhat HSBA", ButtonStyle.Primary);
+            var btnUpdate = UIHelper.CreateButton("Cập nhật HSBA", ButtonStyle.Primary);
             btnUpdate.Location = new Point(940, 35);
             btnUpdate.Size = new Size(155, 32);
             btnUpdate.Click += (s, e) => UpdateHSBA();
@@ -123,7 +123,10 @@ namespace OracleAdminApp.Forms
 
         private void BuildBenhNhanTab(TabPage page)
         {
-            var cardGrid = UIHelper.CreateCard(10, 10, 1120, 300, "BENH NHAN LIEN QUAN");
+            page.AutoScroll = true;
+            page.AutoScrollMinSize = new Size(1140, 610);
+
+            var cardGrid = UIHelper.CreateCard(10, 10, 1120, 300, "BỆNH NHÂN LIÊN QUAN");
             dgvBenhNhan = UIHelper.CreateGrid();
             dgvBenhNhan.Dock = DockStyle.Fill;
             dgvBenhNhan.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
@@ -131,25 +134,22 @@ namespace OracleAdminApp.Forms
             cardGrid.Controls.Add(dgvBenhNhan);
             page.Controls.Add(cardGrid);
 
-            var cardEdit = UIHelper.CreateCard(10, 320, 1120, 230, "CAP NHAT TIEN SU / DI UNG");
+            var cardEdit = UIHelper.CreateCard(10, 320, 1120, 230, "CẬP NHẬT TIỀN SỬ / DỊ ỨNG");
             page.Controls.Add(cardEdit);
 
-            UIHelper.CreateLabeledInput(cardEdit, "Ma BN", 15, 30, 140, out txtBN_Ma);
+            UIHelper.CreateLabeledInput(cardEdit, "Mã BN", 15, 30, 140, out txtBN_Ma);
             txtBN_Ma.ReadOnly = true;
 
-            UIHelper.CreateLabeledInput(cardEdit, "Tien su benh", 15, 80, 1080, out txtBN_TienSu);
-            txtBN_TienSu.Multiline = true;
-            txtBN_TienSu.Height = 45;
+            UIHelper.CreateLabeledInput(cardEdit, "Tiền sử bệnh", 15, 80, 1080, out txtBN_TienSu);
+            UIHelper.ConfigureMemo(txtBN_TienSu, 45);
 
-            UIHelper.CreateLabeledInput(cardEdit, "Tien su benh GD", 15, 140, 1080, out txtBN_TienSuGD);
-            txtBN_TienSuGD.Multiline = true;
-            txtBN_TienSuGD.Height = 45;
+            UIHelper.CreateLabeledInput(cardEdit, "Tiền sử bệnh GĐ", 15, 140, 1080, out txtBN_TienSuGD);
+            UIHelper.ConfigureMemo(txtBN_TienSuGD, 45);
 
-            UIHelper.CreateLabeledInput(cardEdit, "Di ung thuoc", 15, 200, 1080, out txtBN_DiUng);
-            txtBN_DiUng.Multiline = true;
-            txtBN_DiUng.Height = 45;
+            UIHelper.CreateLabeledInput(cardEdit, "Dị ứng thuốc", 15, 200, 1080, out txtBN_DiUng);
+            UIHelper.ConfigureMemo(txtBN_DiUng, 45);
 
-            var btnUpdate = UIHelper.CreateButton("Cap nhat benh nhan", ButtonStyle.Primary);
+            var btnUpdate = UIHelper.CreateButton("Cập nhật bệnh nhân", ButtonStyle.Primary);
             btnUpdate.Location = new Point(940, 35);
             btnUpdate.Size = new Size(155, 32);
             btnUpdate.Click += (s, e) => UpdateBenhNhan();
@@ -163,7 +163,10 @@ namespace OracleAdminApp.Forms
 
         private void BuildHSBADVTab(TabPage page)
         {
-            var cardGrid = UIHelper.CreateCard(10, 10, 1120, 300, "DANH SACH HSBA_DV");
+            page.AutoScroll = true;
+            page.AutoScrollMinSize = new Size(1140, 560);
+
+            var cardGrid = UIHelper.CreateCard(10, 10, 1120, 300, "DANH SÁCH HSBA_DV");
             dgvHSBADV = UIHelper.CreateGrid();
             dgvHSBADV.Dock = DockStyle.Fill;
             dgvHSBADV.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
@@ -171,24 +174,24 @@ namespace OracleAdminApp.Forms
             cardGrid.Controls.Add(dgvHSBADV);
             page.Controls.Add(cardGrid);
 
-            var cardEdit = UIHelper.CreateCard(10, 320, 1120, 180, "THEM / XOA HSBA_DV");
+            var cardEdit = UIHelper.CreateCard(10, 320, 1120, 180, "THÊM / XÓA HSBA_DV");
             page.Controls.Add(cardEdit);
 
-            UIHelper.CreateLabeledInput(cardEdit, "Ma HSBA", 15, 30, 140, out txtDV_MAHSBA);
-            UIHelper.CreateLabeledInput(cardEdit, "Loai DV", 170, 30, 260, out txtDV_LoaiDV);
-            var lblNgay = new Label { Text = "Ngay DV", Location = new Point(450, 30), AutoSize = true, ForeColor = UIHelper.TextMuted, Font = new Font("Segoe UI", 8.5f) };
+            UIHelper.CreateLabeledInput(cardEdit, "Mã HSBA", 15, 30, 140, out txtDV_MAHSBA);
+            UIHelper.CreateLabeledInput(cardEdit, "Loại DV", 170, 30, 260, out txtDV_LoaiDV);
+            var lblNgay = new Label { Text = "Ngày DV", Location = new Point(450, 30), AutoSize = true, ForeColor = UIHelper.TextMuted, Font = new Font("Segoe UI", 8.5f) };
             dtpDV_Ngay = new DateTimePicker { Location = new Point(450, 48), Size = new Size(130, 26), Format = DateTimePickerFormat.Short };
             cardEdit.Controls.Add(lblNgay);
             cardEdit.Controls.Add(dtpDV_Ngay);
-            UIHelper.CreateLabeledInput(cardEdit, "Ma KTV", 595, 30, 120, out txtDV_MAKTV);
+            UIHelper.CreateLabeledInput(cardEdit, "Mã KTV", 595, 30, 120, out txtDV_MAKTV);
 
-            var btnInsert = UIHelper.CreateButton("Them DV", ButtonStyle.Success);
+            var btnInsert = UIHelper.CreateButton("Thêm DV", ButtonStyle.Success);
             btnInsert.Location = new Point(760, 45);
             btnInsert.Size = new Size(100, 32);
             btnInsert.Click += (s, e) => InsertHSBADV();
             cardEdit.Controls.Add(btnInsert);
 
-            var btnDelete = UIHelper.CreateButton("Xoa DV", ButtonStyle.Danger);
+            var btnDelete = UIHelper.CreateButton("Xóa DV", ButtonStyle.Danger);
             btnDelete.Location = new Point(870, 45);
             btnDelete.Size = new Size(100, 32);
             btnDelete.Click += (s, e) => DeleteHSBADV();
@@ -202,7 +205,10 @@ namespace OracleAdminApp.Forms
 
         private void BuildDonThuocTab(TabPage page)
         {
-            var cardGrid = UIHelper.CreateCard(10, 10, 1120, 300, "DANH SACH DON THUOC");
+            page.AutoScroll = true;
+            page.AutoScrollMinSize = new Size(1140, 580);
+
+            var cardGrid = UIHelper.CreateCard(10, 10, 1120, 300, "DANH SÁCH ĐƠN THUỐC");
             dgvDonThuoc = UIHelper.CreateGrid();
             dgvDonThuoc.Dock = DockStyle.Fill;
             dgvDonThuoc.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
@@ -210,30 +216,30 @@ namespace OracleAdminApp.Forms
             cardGrid.Controls.Add(dgvDonThuoc);
             page.Controls.Add(cardGrid);
 
-            var cardEdit = UIHelper.CreateCard(10, 320, 1120, 200, "THEM / CAP NHAT / XOA DON THUOC");
+            var cardEdit = UIHelper.CreateCard(10, 320, 1120, 200, "THÊM / CẬP NHẬT / XÓA ĐƠN THUỐC");
             page.Controls.Add(cardEdit);
 
-            UIHelper.CreateLabeledInput(cardEdit, "Ma HSBA", 15, 30, 140, out txtDT_MAHSBA);
-            var lblNgay = new Label { Text = "Ngay DT", Location = new Point(170, 30), AutoSize = true, ForeColor = UIHelper.TextMuted, Font = new Font("Segoe UI", 8.5f) };
+            UIHelper.CreateLabeledInput(cardEdit, "Mã HSBA", 15, 30, 140, out txtDT_MAHSBA);
+            var lblNgay = new Label { Text = "Ngày ĐT", Location = new Point(170, 30), AutoSize = true, ForeColor = UIHelper.TextMuted, Font = new Font("Segoe UI", 8.5f) };
             dtpDT_Ngay = new DateTimePicker { Location = new Point(170, 48), Size = new Size(120, 26), Format = DateTimePickerFormat.Short };
             cardEdit.Controls.Add(lblNgay);
             cardEdit.Controls.Add(dtpDT_Ngay);
-            UIHelper.CreateLabeledInput(cardEdit, "Ten thuoc", 305, 30, 260, out txtDT_TenThuoc);
-            UIHelper.CreateLabeledInput(cardEdit, "Lieu dung", 580, 30, 520, out txtDT_LieuDung);
+            UIHelper.CreateLabeledInput(cardEdit, "Tên thuốc", 305, 30, 260, out txtDT_TenThuoc);
+            UIHelper.CreateLabeledInput(cardEdit, "Liều dùng", 580, 30, 520, out txtDT_LieuDung);
 
-            var btnInsert = UIHelper.CreateButton("Them", ButtonStyle.Success);
+            var btnInsert = UIHelper.CreateButton("Thêm", ButtonStyle.Success);
             btnInsert.Location = new Point(760, 85);
             btnInsert.Size = new Size(80, 32);
             btnInsert.Click += (s, e) => InsertDonThuoc();
             cardEdit.Controls.Add(btnInsert);
 
-            var btnUpdate = UIHelper.CreateButton("Cap nhat lieu", ButtonStyle.Primary);
+            var btnUpdate = UIHelper.CreateButton("Cập nhật liều", ButtonStyle.Primary);
             btnUpdate.Location = new Point(850, 85);
             btnUpdate.Size = new Size(110, 32);
             btnUpdate.Click += (s, e) => UpdateDonThuoc();
             cardEdit.Controls.Add(btnUpdate);
 
-            var btnDelete = UIHelper.CreateButton("Xoa", ButtonStyle.Danger);
+            var btnDelete = UIHelper.CreateButton("Xóa", ButtonStyle.Danger);
             btnDelete.Location = new Point(970, 85);
             btnDelete.Size = new Size(70, 32);
             btnDelete.Click += (s, e) => DeleteDonThuoc();
@@ -256,11 +262,11 @@ namespace OracleAdminApp.Forms
                     da.Fill(dt);
                     dgvHSBA.DataSource = dt;
                 }
-                UIHelper.SetStatus(lblStatusHSBA, "Da tai danh sach HSBA.", StatusType.Success);
+                UIHelper.SetStatus(lblStatusHSBA, "Đã tải danh sách HSBA.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatusHSBA, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatusHSBA, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -275,11 +281,11 @@ namespace OracleAdminApp.Forms
                     da.Fill(dt);
                     dgvBenhNhan.DataSource = dt;
                 }
-                UIHelper.SetStatus(lblStatusBN, "Da tai danh sach benh nhan.", StatusType.Success);
+                UIHelper.SetStatus(lblStatusBN, "Đã tải danh sách bệnh nhân.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatusBN, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatusBN, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -294,11 +300,11 @@ namespace OracleAdminApp.Forms
                     da.Fill(dt);
                     dgvHSBADV.DataSource = dt;
                 }
-                UIHelper.SetStatus(lblStatusDV, "Da tai danh sach HSBA_DV.", StatusType.Success);
+                UIHelper.SetStatus(lblStatusDV, "Đã tải danh sách HSBA_DV.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatusDV, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatusDV, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -313,11 +319,11 @@ namespace OracleAdminApp.Forms
                     da.Fill(dt);
                     dgvDonThuoc.DataSource = dt;
                 }
-                UIHelper.SetStatus(lblStatusDT, "Da tai danh sach don thuoc.", StatusType.Success);
+                UIHelper.SetStatus(lblStatusDT, "Đã tải danh sách đơn thuốc.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatusDT, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatusDT, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -363,7 +369,7 @@ namespace OracleAdminApp.Forms
         {
             if (string.IsNullOrWhiteSpace(txtHSBA_Ma.Text))
             {
-                UIHelper.SetStatus(lblStatusHSBA, "Vui long chon HSBA.", StatusType.Warning);
+                UIHelper.SetStatus(lblStatusHSBA, "Vui lòng chọn HSBA.", StatusType.Warning);
                 return;
             }
 
@@ -384,11 +390,11 @@ namespace OracleAdminApp.Forms
                 }
 
                 LoadHSBA();
-                UIHelper.SetStatus(lblStatusHSBA, "Da cap nhat HSBA.", StatusType.Success);
+                UIHelper.SetStatus(lblStatusHSBA, "Đã cập nhật HSBA.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatusHSBA, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatusHSBA, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -396,7 +402,7 @@ namespace OracleAdminApp.Forms
         {
             if (string.IsNullOrWhiteSpace(txtBN_Ma.Text))
             {
-                UIHelper.SetStatus(lblStatusBN, "Vui long chon benh nhan.", StatusType.Warning);
+                UIHelper.SetStatus(lblStatusBN, "Vui lòng chọn bệnh nhân.", StatusType.Warning);
                 return;
             }
 
@@ -420,11 +426,11 @@ namespace OracleAdminApp.Forms
                 }
 
                 LoadBenhNhan();
-                UIHelper.SetStatus(lblStatusBN, "Da cap nhat benh nhan.", StatusType.Success);
+                UIHelper.SetStatus(lblStatusBN, "Đã cập nhật bệnh nhân.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatusBN, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatusBN, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -450,11 +456,11 @@ namespace OracleAdminApp.Forms
                 }
 
                 LoadHSBADV();
-                UIHelper.SetStatus(lblStatusDV, "Da them dich vu.", StatusType.Success);
+                UIHelper.SetStatus(lblStatusDV, "Đã thêm dịch vụ.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatusDV, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatusDV, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -462,7 +468,7 @@ namespace OracleAdminApp.Forms
         {
             if (string.IsNullOrWhiteSpace(txtDV_MAHSBA.Text) || string.IsNullOrWhiteSpace(txtDV_LoaiDV.Text))
             {
-                UIHelper.SetStatus(lblStatusDV, "Vui long chon dich vu can xoa.", StatusType.Warning);
+                UIHelper.SetStatus(lblStatusDV, "Vui lòng chọn dịch vụ cần xóa.", StatusType.Warning);
                 return;
             }
 
@@ -482,11 +488,11 @@ namespace OracleAdminApp.Forms
                 }
 
                 LoadHSBADV();
-                UIHelper.SetStatus(lblStatusDV, "Da xoa dich vu.", StatusType.Success);
+                UIHelper.SetStatus(lblStatusDV, "Đã xóa dịch vụ.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatusDV, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatusDV, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -512,11 +518,11 @@ namespace OracleAdminApp.Forms
                 }
 
                 LoadDonThuoc();
-                UIHelper.SetStatus(lblStatusDT, "Da them don thuoc.", StatusType.Success);
+                UIHelper.SetStatus(lblStatusDT, "Đã thêm đơn thuốc.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatusDT, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatusDT, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -524,7 +530,7 @@ namespace OracleAdminApp.Forms
         {
             if (string.IsNullOrWhiteSpace(txtDT_MAHSBA.Text) || string.IsNullOrWhiteSpace(txtDT_TenThuoc.Text))
             {
-                UIHelper.SetStatus(lblStatusDT, "Vui long chon don thuoc.", StatusType.Warning);
+                UIHelper.SetStatus(lblStatusDT, "Vui lòng chọn đơn thuốc.", StatusType.Warning);
                 return;
             }
 
@@ -548,11 +554,11 @@ namespace OracleAdminApp.Forms
                 }
 
                 LoadDonThuoc();
-                UIHelper.SetStatus(lblStatusDT, "Da cap nhat lieu dung.", StatusType.Success);
+                UIHelper.SetStatus(lblStatusDT, "Đã cập nhật liều dùng.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatusDT, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatusDT, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
 
@@ -560,7 +566,7 @@ namespace OracleAdminApp.Forms
         {
             if (string.IsNullOrWhiteSpace(txtDT_MAHSBA.Text) || string.IsNullOrWhiteSpace(txtDT_TenThuoc.Text))
             {
-                UIHelper.SetStatus(lblStatusDT, "Vui long chon don thuoc.", StatusType.Warning);
+                UIHelper.SetStatus(lblStatusDT, "Vui lòng chọn đơn thuốc.", StatusType.Warning);
                 return;
             }
 
@@ -580,11 +586,11 @@ namespace OracleAdminApp.Forms
                 }
 
                 LoadDonThuoc();
-                UIHelper.SetStatus(lblStatusDT, "Da xoa don thuoc.", StatusType.Success);
+                UIHelper.SetStatus(lblStatusDT, "Đã xóa đơn thuốc.", StatusType.Success);
             }
             catch (Exception ex)
             {
-                UIHelper.SetStatus(lblStatusDT, "Loi: " + ex.Message, StatusType.Error);
+                UIHelper.SetStatus(lblStatusDT, "Lỗi: " + ex.Message, StatusType.Error);
             }
         }
     }

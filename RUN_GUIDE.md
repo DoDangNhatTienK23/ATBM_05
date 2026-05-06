@@ -187,17 +187,25 @@ ORDER BY granted_role, grantee;
 - Lỗi thường gặp:
   - `ORA-01031` ở `DBMS_FGA.ADD_POLICY`: `BVDBA` chưa có quyền đủ mạnh. Kiểm tra DB-01 đã grant `DBA` cho `BVDBA`.
 
-### Bước DB-05: Chạy `Database/hospital_setup.sql`, dòng 801-1047
+### Bước DB-05: Chạy `Database/hospital_setup.sql`, dòng 801-1095
 
-- Mục đích: VPD cho Điều phối viên và Bác sĩ/Y sĩ.
+- Mục đích: VPD cho Điều phối viên, Bác sĩ/Y sĩ, Bệnh nhân và phần lọc `HSBA_DV` của Kỹ thuật viên.
 - Đăng nhập bằng user: `BVDBA`, không chạy bằng `SYS` hoặc `SYSTEM`.
-- Chạy: dòng 801 đến dòng 1047.
+- Chạy: dòng 801 đến dòng 1095.
 - Object tạo:
   - Role `RL_DIEUPHOIVIEN`, `RL_BACSI`.
   - Package `PKG_VPD_HOSPITAL`.
   - Context `HOSPITAL_CTX`.
   - Trigger `TRG_SET_CTX_HOSPITAL`.
   - Policy `VPD_BENHNHAN_TC2_TC3`, `VPD_HSBA_TC2_TC3`, `VPD_HSBA_DV_TC2_TC3`, `VPD_DONTHUOC_TC3`.
+- Thay đổi VPD mới nhất:
+  - `PKG_VPD_HOSPITAL.set_ctx` set thêm context `MABN` cho user bệnh nhân.
+  - Nếu context chưa được set, policy function tự tra cứu lại `NHANVIEN` hoặc `BENHNHAN` theo `ORACLE_USERNAME`.
+  - Bệnh nhân được lọc trực tiếp theo `MABN` trên `BENHNHAN` và `HSBA`.
+  - Kỹ thuật viên được lọc `HSBA_DV` theo `MAKTV`.
+- Quyền bác sĩ cần có cho app:
+  - `SELECT, INSERT, DELETE ON HSBA_DV`.
+  - `SELECT, INSERT, UPDATE, DELETE ON DONTHUOC`.
 - SQL kiểm tra:
 
 ```sql
@@ -205,21 +213,30 @@ SELECT object_name, object_type, status
 FROM user_objects
 WHERE object_name IN ('PKG_VPD_HOSPITAL','TRG_SET_CTX_HOSPITAL');
 
-SELECT object_name, policy_name, policy_function
-FROM dba_policies
-WHERE object_owner = 'BVDBA'
+SELECT object_name,
+       policy_name,
+       pf_owner || '.' ||
+       NVL2("PACKAGE", "PACKAGE" || '.', '') ||
+       "FUNCTION" AS policy_function
+FROM user_policies
 ORDER BY object_name;
+
+SELECT grantee, table_name, privilege
+FROM user_tab_privs
+WHERE grantee = 'RL_BACSI'
+AND table_name IN ('HSBA_DV','DONTHUOC')
+ORDER BY table_name, privilege;
 ```
 
 - Lỗi thường gặp:
   - `ORA-20010 Vui long chay script bang schema owner`: bạn đang chạy bằng `SYS` hoặc `SYSTEM`.
-  - User bác sĩ thấy 0 dòng: đăng nhập lại để trigger logon set context, hoặc chạy `EXEC BVDBA.PKG_VPD_HOSPITAL.set_ctx;` trong session test.
+  - User bác sĩ/bệnh nhân/KTV thấy 0 dòng bất thường: đăng nhập lại để trigger logon set context, hoặc chạy `EXEC BVDBA.PKG_VPD_HOSPITAL.set_ctx;` trong session test.
 
-### Bước DB-06: Chạy `Database/hospital_setup.sql`, dòng 1051-1660
+### Bước DB-06: Chạy `Database/hospital_setup.sql`, dòng 1099-1708
 
 - Mục đích: tạo object phục vụ Phân hệ 1 DBA app và một số view/procedure nghiệp vụ.
 - Đăng nhập bằng user: `BVDBA`.
-- Chạy: dòng 1051 đến dòng 1660.
+- Chạy: dòng 1099 đến dòng 1708.
 - Object quan trọng:
   - Type: `T_USER_ROW`, `T_USER_TABLE`, `T_ROLE_ROW`, `T_ROLE_TABLE`, `T_OBJECT_ROW`, ...
   - Procedure: `SP_CREATE_USER`, `SP_DROP_USER`, `SP_ALTER_USER_PASSWORD`, `SP_LOCK_UNLOCK_USER`, `SP_CREATE_ROLE`, `SP_DROP_ROLE`, `SP_GRANT_OBJ_PRIV`, `SP_GRANT_ROLE`, `SP_REVOKE_OBJ_PRIV`, `SP_REVOKE_SYS_PRIV`, `SP_REVOKE_ROLE`.
@@ -241,11 +258,11 @@ SELECT * FROM TABLE(FN_GET_OBJ_PRIVS('RL_BACSI'));
 - Lỗi thường gặp:
   - App DBA không load được user/role: kiểm tra các function `FN_LIST_USERS`, `FN_LIST_ROLES` có `VALID`.
 
-### Bước DB-07: Chạy block audit hệ thống trong `Database/hospital_setup.sql`, dòng 1826-1841
+### Bước DB-07: Chạy block audit hệ thống trong `Database/hospital_setup.sql`, dòng 1879-1890
 
 - Mục đích: kiểm tra `audit_trail`, cấp quyền đọc audit log cho `BVDBA`.
 - Đăng nhập bằng user: `SYS AS SYSDBA`.
-- Chạy: chỉ dòng 1826 đến dòng 1841.
+- Chạy: chỉ dòng 1879 đến dòng 1890.
 - Kết quả mong đợi: thấy tham số `audit_trail`, `BVDBA` đọc được `DBA_AUDIT_TRAIL`.
 - SQL kiểm tra:
 
@@ -269,11 +286,11 @@ AND grantee = 'BVDBA';
 - Lỗi thường gặp:
   - `audit_trail = NONE`: bật audit cần chỉnh tham số và restart database. Phần source không có script restart.
 
-### Bước DB-08: Chạy audit/FGA trong `Database/hospital_setup.sql`, dòng 1663-1824
+### Bước DB-08: Chạy audit/FGA trong `Database/hospital_setup.sql`, dòng 1712-1871
 
 - Mục đích: tạo FGA policy và Standard Audit cho các ngữ cảnh chính.
 - Đăng nhập bằng user: `BVDBA`.
-- Chạy: dòng 1663 đến dòng 1824.
+- Chạy: dòng 1712 đến dòng 1871.
 - Policy FGA:
   - `FGA_DT_UPDATE_AFTER_CREATE` trên `DONTHUOC`.
   - `FGA_HSBA_BS_UPDATE` trên `HSBA`.
@@ -302,18 +319,21 @@ WHERE object_schema = 'BVDBA';
 - Lỗi thường gặp:
   - `ORA-00942` khi đọc audit view: đăng nhập `BVDBA` chưa được cấp quyền ở DB-07.
 
-### Bước DB-09: Chạy audit bổ sung trong `Database/hospital_setup.sql`, dòng 1855-2123
+### Bước DB-09: Chạy audit bổ sung và compile lại VPD trong `Database/hospital_setup.sql`, dòng 1903-2313
 
-- Mục đích: tạo `VW_AUDIT_BENHNHAN_LIENQUAN`, `FN_AUDIT_DEM_HSBA_BACSI`, grant role và bật thêm 5 ngữ cảnh Standard Audit.
+- Mục đích: tạo `VW_AUDIT_BENHNHAN_LIENQUAN`, `FN_AUDIT_DEM_HSBA_BACSI`, grant role, bật thêm 5 ngữ cảnh Standard Audit và compile lại `PKG_VPD_HOSPITAL` theo logic VPD mới.
 - Đăng nhập bằng user: `BVDBA`.
-- Chạy: dòng 1855 đến dòng 2123.
-- Không chạy tiếp dòng 2125-2252 nếu muốn giữ hành vi VPD/KTV ổn định cho app. Đoạn 2125-2252 tạo lại package body `PKG_VPD_HOSPITAL` và trong source hiện tại có thể làm KTV không thấy dữ liệu `HSBA_DV` qua VPD.
+- Chạy: dòng 1903 đến dòng 2313.
+- Đoạn dòng 2173-2313 hiện là package body VPD đã được sửa: có context `MABN` cho bệnh nhân và vẫn giữ nhánh KTV lọc `HSBA_DV` theo `MAKTV`. Không còn cần tránh đoạn này như phiên bản guide cũ.
+- Nếu database đã setup từ trước và bạn chỉ vừa pull thay đổi VPD mới, không cần chạy lại toàn bộ script. Chạy lại bằng `BVDBA` đoạn `CREATE OR REPLACE PACKAGE BODY PKG_VPD_HOSPITAL` ở dòng 2173-2313 là đủ trong đa số trường hợp; sau đó đăng xuất/đăng nhập lại user nghiệp vụ để trigger set context mới.
 - SQL kiểm tra:
 
 ```sql
 SELECT object_name, object_type, status
 FROM user_objects
-WHERE object_name IN ('VW_AUDIT_BENHNHAN_LIENQUAN','FN_AUDIT_DEM_HSBA_BACSI');
+WHERE object_name IN ('VW_AUDIT_BENHNHAN_LIENQUAN','FN_AUDIT_DEM_HSBA_BACSI','PKG_VPD_HOSPITAL');
+
+SHOW ERRORS PACKAGE BODY PKG_VPD_HOSPITAL;
 
 SELECT owner, object_name, sel, ins, upd, del, exe
 FROM dba_obj_audit_opts
@@ -439,9 +459,12 @@ FROM dba_col_privs
 WHERE owner = 'BVDBA'
 ORDER BY grantee, table_name, column_name;
 
-SELECT object_name, policy_name, policy_function
-FROM dba_policies
-WHERE object_owner = 'BVDBA'
+SELECT object_name,
+       policy_name,
+       pf_owner || '.' ||
+       NVL2("PACKAGE", "PACKAGE" || '.', '') ||
+       "FUNCTION" AS policy_function
+FROM user_policies
 ORDER BY object_name;
 
 SELECT db_user, object_name, policy_name, statement_type, sql_text
@@ -466,19 +489,18 @@ ORDER BY event_timestamp DESC;
 
 ## 7. Cấu hình connection cho WinForm
 
-Không có connection string cố định trong `App.config`. Màn hình `Forms/LoginForm.cs` tạo connection string từ UI:
+Không có connection string cố định trong `App.config`. Màn hình `Forms/LoginForm.cs` chỉ cho nhập `Username` và `Password`; host/port/service được dùng mặc định trong code:
 
 ```text
-User Id=<Username>;Password=<Password>;Data Source=<Host>:<Port>/<Service Name>
+User Id=<Username>;Password=<Password>;Data Source=localhost:1521/XEPDB1
 ```
 
-Giá trị mặc định trên form:
+Giá trị kết nối mặc định:
 
 - Host: `localhost`
 - Port: `1521`
 - Service Name: `XEPDB1`
-- Username: `SYSTEM`
-- Có checkbox `Kết nối với quyền SYSDBA`
+- Username mặc định trên form: `BVDBA`
 
 Khi login:
 
@@ -682,7 +704,7 @@ Role trong source:
 - `RL_BENHNHAN`: `CREATE SESSION`, `SELECT/UPDATE` view `VW_BN_THONGTIN_CANHAN`.
 - `RL_KYTHUATVIEN`: `CREATE SESSION`, `SELECT/UPDATE` view `VW_NV_THONGTIN_CANHAN`, `SELECT/UPDATE(KETQUA)` view `VW_KTV_HSBA_DV`.
 - `RL_DIEUPHOIVIEN`: quyền trên `BENHNHAN`, `HSBA`, `HSBA_DV`.
-- `RL_BACSI`: quyền trên `HSBA`, `BENHNHAN`, `HSBA_DV`, `DONTHUOC`.
+- `RL_BACSI`: quyền trên `HSBA`, `BENHNHAN`; `SELECT/INSERT/DELETE` trên `HSBA_DV`; `SELECT/INSERT/UPDATE/DELETE` trên `DONTHUOC`.
 
 SQL kiểm tra:
 
@@ -730,14 +752,19 @@ Predicate chính:
 
 - Điều phối viên: thấy toàn bộ `BENHNHAN`, `HSBA`, `HSBA_DV`.
 - Bác sĩ/Y sĩ: thấy `HSBA` có `MABS` là mã bác sĩ của mình; `BENHNHAN` và `DONTHUOC` liên quan HSBA của mình.
-- Kỹ thuật viên: trong package body đầu, `HSBA_DV` lọc theo `MAKTV`.
+- Bệnh nhân: context `MABN` được set theo `ORACLE_USERNAME`; chỉ thấy `BENHNHAN` và `HSBA` có `MABN` của chính mình.
+- Kỹ thuật viên: `HSBA_DV` lọc theo `MAKTV`.
 
 SQL kiểm tra:
 
 ```sql
-SELECT object_name, policy_name, policy_function, sel, ins, upd, del
-FROM dba_policies
-WHERE object_owner='BVDBA'
+SELECT object_name,
+       policy_name,
+       pf_owner || '.' ||
+       NVL2("PACKAGE", "PACKAGE" || '.', '') ||
+       "FUNCTION" AS policy_function,
+       sel, ins, upd, del
+FROM user_policies
 ORDER BY object_name;
 
 -- chạy bằng BS_AN
@@ -745,6 +772,13 @@ SELECT MAHSBA, MABS FROM BVDBA.HSBA ORDER BY MAHSBA;
 
 -- chạy bằng DPV_LAN
 SELECT COUNT(*) FROM BVDBA.HSBA;
+
+-- chạy bằng BN_ANH
+SELECT MABN, TENBN FROM BVDBA.BENHNHAN;
+SELECT MAHSBA, MABN FROM BVDBA.HSBA ORDER BY MAHSBA;
+
+-- chạy bằng KTV_NAM
+SELECT MAHSBA, LOAIDV, MAKTV FROM BVDBA.HSBA_DV ORDER BY MAHSBA, LOAIDV;
 ```
 
 Phân biệt lỗi thiếu quyền và VPD:
@@ -873,14 +907,14 @@ ORDER BY timestamp DESC;
 | `ORA-01017 invalid username/password` | Sai username/password/service | Test connection SQL Developer | User nghiệp vụ dùng uppercase, password `Welcome#123`; `BVDBA` dùng `BvDba#2026` |
 | `ORA-00942 table or view does not exist` | Chưa chạy script, sai schema, thiếu quyền | `SELECT table_name FROM all_tables WHERE owner='BVDBA';` | Chạy lại DB-02 đến DB-06, dùng prefix `BVDBA.` |
 | `ORA-01031 insufficient privileges` | Role chưa grant, user sai | `DBA_ROLE_PRIVS`, `DBA_TAB_PRIVS` | Chạy lại DB-03/04/05/06 |
-| `ORA-28110` hoặc lỗi VPD | Policy function lỗi | `SHOW ERRORS PACKAGE BODY PKG_VPD_HOSPITAL` | Compile lại package DB-05; không chạy đoạn override dòng 2125-2252 nếu không cần |
+| `ORA-28110` hoặc lỗi VPD | Policy function lỗi | `SHOW ERRORS PACKAGE BODY PKG_VPD_HOSPITAL` | Compile lại package ở DB-05 hoặc đoạn VPD cuối DB-09 dòng 2173-2313 |
 | OLS `ORA-124xx` | OLS chưa enable hoặc label sai | `DBA_SA_POLICIES`, `DBA_SA_USER_LABELS` | Chạy DB-10 đến DB-14 đúng thứ tự |
 | App không login OLS user | `LoginForm` cần `VW_TC1_TOI_LA_AI`, OLS user không có mapping | Login `U1_GIAMDOC` báo không định danh | Test OLS bằng SQL Developer; source hiện chưa route UI cho `U1...U8` |
 | Lỗi connection string | Sai service name/SID | SQL Developer test `localhost:1521/XEPDB1` | Dùng Service Name `XEPDB1`, không dùng SID nếu đang Oracle XE PDB |
 | Thiếu `Oracle.ManagedDataAccess` | Package chưa restore/copy | Kiểm tra `packages/Oracle.ManagedDataAccess.23.26.100` | Build bằng MSBuild `/t:Restore,Build` |
 | `dotnet run` không chạy | Project là `.NET Framework` kiểu cũ | Mở `.csproj` thấy `TargetFrameworkVersion v4.7.2` | Dùng MSBuild hoặc Visual Studio |
 | Sai container | Đang ở `CDB$ROOT` | `SHOW CON_NAME;` | `ALTER SESSION SET CONTAINER = XEPDB1;` |
-| KTV thấy 0 dịch vụ sau khi chạy audit cuối | Đã chạy dòng 2125-2252 làm override VPD package body | Kiểm tra package body phần `HSBA_DV` có nhánh KTV không | Chạy lại DB-05 để restore package body ban đầu |
+| Bệnh nhân/KTV thấy 0 dòng bất thường sau khi cập nhật VPD | Session cũ chưa set context mới, hoặc package body chưa compile bản mới | Kiểm tra `SHOW ERRORS PACKAGE BODY PKG_VPD_HOSPITAL`; đăng nhập lại hoặc chạy `EXEC BVDBA.PKG_VPD_HOSPITAL.set_ctx;` | Chạy lại DB-05 hoặc chỉ compile đoạn VPD cuối DB-09 dòng 2173-2313 |
 
 ## 18. Checklist chạy demo trước khi chấm
 
@@ -893,11 +927,11 @@ ORDER BY timestamp DESC;
 7. User nghiệp vụ như `BS_AN`, `KTV_NAM`, `BN_ANH`, `DPV_LAN` tồn tại.
 8. Role `RL_BENHNHAN`, `RL_KYTHUATVIEN`, `RL_DIEUPHOIVIEN`, `RL_BACSI` tồn tại.
 9. RBAC pass: bệnh nhân/KTV chỉ thao tác view được cấp.
-10. VPD pass: bác sĩ chỉ thấy HSBA của mình; điều phối viên thấy toàn bộ.
+10. VPD pass: bác sĩ chỉ thấy HSBA của mình; bệnh nhân chỉ thấy `MABN` của mình; KTV chỉ thấy `HSBA_DV` theo `MAKTV`; điều phối viên thấy toàn bộ.
 11. OLS pass bằng SQL Developer với `U1...U8`.
 12. Audit/FGA sinh log sau khi chạy `TEST.sql`.
 13. WinForm build được bằng MSBuild.
 14. Login `BVDBA` mở Phân hệ 1.
 15. Login `DPV_LAN`, `BS_AN`, `KTV_NAM`, `BN_ANH` mở đúng màn hình.
 16. Negative test bị chặn đúng.
-17. Trước demo, không chạy nhầm `hospital_setup.sql` dòng 2125-2252 nếu cần KTV thấy dữ liệu.
+17. Nếu vừa pull bản VPD mới trên database đã setup sẵn, compile lại `PKG_VPD_HOSPITAL` bằng DB-05 hoặc đoạn dòng 2173-2313 rồi đăng nhập lại các user test.
