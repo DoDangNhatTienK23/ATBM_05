@@ -276,6 +276,12 @@ namespace OracleAdminApp.Forms
                             var doctorForm = new DoctorForm(connStr, upperUsername);
                             doctorForm.Show();
                         }
+                        else if (userRole == "OLS_TESTER")
+                        {
+                            // 6. Dành riêng cho U1 -> U8 xem thông báo OLS
+                            var olsForm = new NotificationOnlyForm(connStr, upperUsername);
+                            olsForm.Show();
+                        }
                         else
                         {
                             MessageBox.Show($"Đăng nhập thành công nhưng chưa có giao diện cho vai trò: {userRole}");
