@@ -119,8 +119,11 @@ namespace OracleAdminApp.Forms
 
         private void BuildBenhNhanTab(TabPage page)
         {
+            // NOTE: Trước đây phần "CẬP NHẬT TIỀN SỬ / DỊ ỨNG" bị che do chiều cao AutoScrollMinSize quá nhỏ
+            // so với tổng height thực tế của các control (cardEdit cao ~230 + status label ở y=560).
+            // Tăng AutoScrollMinSize để luôn đủ không gian, tránh bị che / cắt.
             page.AutoScroll = true;
-            page.AutoScrollMinSize = new Size(1140, 610);
+            page.AutoScrollMinSize = new Size(1140, 700);
 
             var cardGrid = UIHelper.CreateCard(10, 10, 1120, 300, "BỆNH NHÂN LIÊN QUAN");
             dgvBenhNhan = UIHelper.CreateGrid();
@@ -130,7 +133,7 @@ namespace OracleAdminApp.Forms
             cardGrid.Controls.Add(dgvBenhNhan);
             page.Controls.Add(cardGrid);
 
-            var cardEdit = UIHelper.CreateCard(10, 320, 1120, 230, "CẬP NHẬT TIỀN SỬ / DỊ ỨNG");
+            var cardEdit = UIHelper.CreateCard(10, 320, 1120, 250, "CẬP NHẬT TIỀN SỬ / DỊ ỨNG");
             page.Controls.Add(cardEdit);
 
             UIHelper.CreateLabeledInput(cardEdit, "Mã BN", 15, 30, 140, out txtBN_Ma);
@@ -151,7 +154,13 @@ namespace OracleAdminApp.Forms
             btnUpdate.Click += (s, e) => UpdateBenhNhan();
             cardEdit.Controls.Add(btnUpdate);
 
-            lblStatusBN = new Label { Location = new Point(15, 560), Size = new Size(800, 22), Font = new Font("Segoe UI", 8.5f) };
+            // Đặt status nằm sát cardEdit để không bị đè lên bởi AutoScroll + panel bottom
+            lblStatusBN = new Label
+            {
+                Location = new Point(15, cardEdit.Bottom + 10),
+                Size = new Size(800, 22),
+                Font = new Font("Segoe UI", 8.5f)
+            };
             page.Controls.Add(lblStatusBN);
 
             LoadBenhNhan();
