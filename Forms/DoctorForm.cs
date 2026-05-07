@@ -61,7 +61,6 @@ namespace OracleAdminApp.Forms
             BuildBenhNhanTab(tabBN);
             BuildHSBADVTab(tabDV);
             BuildDonThuocTab(tabDT);
-            MessageBox.Show("DoctorForm BuildBenhNhanTab NEW CODE");
             tabControl.TabPages.Add(tabHSBA);
             tabControl.TabPages.Add(tabBN);
             tabControl.TabPages.Add(tabDV);
@@ -136,7 +135,7 @@ namespace OracleAdminApp.Forms
             cardGrid.Controls.Add(dgvBenhNhan);
             page.Controls.Add(cardGrid);
 
-            var cardEdit = UIHelper.CreateCard(10, 330, 1120, 400, "CẬP NHẬT TIỀN SỬ / DỊ ỨNG");
+            var cardEdit = UIHelper.CreateCard(10, 330, 1120, 300, "CẬP NHẬT TIỀN SỬ / DỊ ỨNG ");
             page.Controls.Add(cardEdit);
 
             UIHelper.CreateLabeledInput(cardEdit, "Mã BN", 15, 30, 140, out txtBN_Ma);
