@@ -1,9 +1,9 @@
+using Oracle.ManagedDataAccess.Client;
+using OracleAdminApp.Helpers;
 using System;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
-using Oracle.ManagedDataAccess.Client;
-using OracleAdminApp.Helpers;
 
 namespace OracleAdminApp.Forms
 {
@@ -61,7 +61,7 @@ namespace OracleAdminApp.Forms
             BuildBenhNhanTab(tabBN);
             BuildHSBADVTab(tabDV);
             BuildDonThuocTab(tabDT);
-
+            MessageBox.Show("DoctorForm BuildBenhNhanTab NEW CODE");
             tabControl.TabPages.Add(tabHSBA);
             tabControl.TabPages.Add(tabBN);
             tabControl.TabPages.Add(tabDV);
@@ -72,9 +72,10 @@ namespace OracleAdminApp.Forms
             btnLogout.Location = new Point(15, 10);
             btnLogout.Click += (s, e) => { Close(); new LoginForm().Show(); };
             pnlBottom.Controls.Add(btnLogout);
-
-            Controls.Add(tabControl);
+            
             Controls.Add(pnlBottom);
+            Controls.Add(tabControl);
+            
         }
 
         private void BuildHSBATab(TabPage page)
@@ -122,8 +123,10 @@ namespace OracleAdminApp.Forms
             // NOTE: Trước đây phần "CẬP NHẬT TIỀN SỬ / DỊ ỨNG" bị che do chiều cao AutoScrollMinSize quá nhỏ
             // so với tổng height thực tế của các control (cardEdit cao ~230 + status label ở y=560).
             // Tăng AutoScrollMinSize để luôn đủ không gian, tránh bị che / cắt.
+
+           
             page.AutoScroll = true;
-            page.AutoScrollMinSize = new Size(1140, 700);
+            page.AutoScrollMinSize = new Size(1140, 820);
 
             var cardGrid = UIHelper.CreateCard(10, 10, 1120, 300, "BỆNH NHÂN LIÊN QUAN");
             dgvBenhNhan = UIHelper.CreateGrid();
@@ -133,20 +136,20 @@ namespace OracleAdminApp.Forms
             cardGrid.Controls.Add(dgvBenhNhan);
             page.Controls.Add(cardGrid);
 
-            var cardEdit = UIHelper.CreateCard(10, 320, 1120, 250, "CẬP NHẬT TIỀN SỬ / DỊ ỨNG");
+            var cardEdit = UIHelper.CreateCard(10, 330, 1120, 400, "CẬP NHẬT TIỀN SỬ / DỊ ỨNG");
             page.Controls.Add(cardEdit);
 
             UIHelper.CreateLabeledInput(cardEdit, "Mã BN", 15, 30, 140, out txtBN_Ma);
             txtBN_Ma.ReadOnly = true;
 
             UIHelper.CreateLabeledInput(cardEdit, "Tiền sử bệnh", 15, 80, 1080, out txtBN_TienSu);
-            UIHelper.ConfigureMemo(txtBN_TienSu, 45);
-
+            UIHelper.ConfigureMemo(txtBN_TienSu, 40);
+          
             UIHelper.CreateLabeledInput(cardEdit, "Tiền sử bệnh GĐ", 15, 140, 1080, out txtBN_TienSuGD);
-            UIHelper.ConfigureMemo(txtBN_TienSuGD, 45);
+            UIHelper.ConfigureMemo(txtBN_TienSuGD, 40);
 
             UIHelper.CreateLabeledInput(cardEdit, "Dị ứng thuốc", 15, 200, 1080, out txtBN_DiUng);
-            UIHelper.ConfigureMemo(txtBN_DiUng, 45);
+            UIHelper.ConfigureMemo(txtBN_DiUng, 40);
 
             var btnUpdate = UIHelper.CreateButton("Cập nhật bệnh nhân", ButtonStyle.Primary);
             btnUpdate.Location = new Point(940, 35);
