@@ -48,10 +48,6 @@ namespace OracleAdminApp.Forms
             tabControl.TabPages.Add(tabServices);
             tabControl.TabPages.Add(tabProfile);
 
-            var tabThongBao = new TabPage("  Thông báo  ") { BackColor = UIHelper.LightBg };
-            tabThongBao.Controls.Add(new ThongBaoPanel(_connStr));
-            tabControl.TabPages.Add(tabThongBao);
-
             var pnlBottom = new Panel { Dock = DockStyle.Bottom, Height = 60, BackColor = Color.White };
             var btnLogout = UIHelper.CreateButton("Đăng xuất", ButtonStyle.Secondary);
             btnLogout.Location = new Point(20, 10);

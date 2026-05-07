@@ -79,22 +79,6 @@ namespace OracleAdminApp.Forms
             btnLogout.Click += (s, e) => { this.Close(); new LoginForm().Show(); };
             this.Controls.Add(btnLogout);
 
-            btnThongBao = UIHelper.CreateButton("Xem thông báo", ButtonStyle.Primary);
-            btnThongBao.Location = new Point(230, 550);
-            btnThongBao.Size = new Size(180, 40);
-            btnThongBao.Click += (s, e) =>
-            {
-                var f = new Form
-                {
-                    Text = "Thông báo - " + _username,
-                    Size = new Size(950, 550),
-                    StartPosition = FormStartPosition.CenterParent
-                };
-                f.Controls.Add(new ThongBaoPanel(_connStr));
-                f.ShowDialog();
-            };
-            this.Controls.Add(btnThongBao);
-
             lblStatus = new Label { Location = new Point(230, 560), Size = new Size(320, 25), Font = new Font("Segoe UI", 9f) };
             this.Controls.Add(lblStatus);
         }

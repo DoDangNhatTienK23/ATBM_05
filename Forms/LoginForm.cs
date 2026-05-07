@@ -206,17 +206,23 @@ namespace OracleAdminApp.Forms
                         // Nếu KHÔNG PHẢI là Admin (BVDBA), truy vấn xem họ là ai
                         if (upperUsername != "BVDBA" && upperUsername != "SYS" && upperUsername != "SYSTEM")
                         {
-                            string sql = "SELECT VAITRO FROM BVDBA.VW_TC1_TOI_LA_AI";
-                            using (var cmd = new Oracle.ManagedDataAccess.Client.OracleCommand(sql, conn))
+                            if (upperUsername.StartsWith("U") && upperUsername.Length == 2 && char.IsDigit(upperUsername[1]))
                             {
-                                var result = cmd.ExecuteScalar();
-                                if (result != null)
+                                userRole = "OLS_TESTER";
+                            }
+                            else {
+                                string sql = "SELECT VAITRO FROM BVDBA.VW_TC1_TOI_LA_AI";
+                                using (var cmd = new Oracle.ManagedDataAccess.Client.OracleCommand(sql, conn))
                                 {
-                                    userRole = result.ToString();
-                                }
-                                else
-                                {
-                                    error = "Không tìm thấy thông tin định danh của tài khoản này trong hệ thống Bệnh viện!";
+                                    var result = cmd.ExecuteScalar();
+                                    if (result != null)
+                                    {
+                                        userRole = result.ToString();
+                                    }
+                                    else
+                                    {
+                                        error = "Không tìm thấy thông tin định danh của tài khoản này trong hệ thống Bệnh viện!";
+                                    }
                                 }
                             }
                         }

@@ -221,146 +221,91 @@ END;
  
  
 -- ============================================================
--- BUOC 6: GAN NHAN CHO NGUOI DUNG (u1~u8)
+-- BUOC 6: TAO VA GAN NHAN CHO NGUOI DUNG (u1~u8)
 -- Nguoi dung doc duoc du lieu khi:
 --   user.max_level >= data.level
 --   user.compartments INTERSECT data.compartments (neu du lieu co compartment)
 --   user.groups INTERSECT data.groups (neu du lieu co group)
 -- ============================================================
 
+-- Tao user
+BEGIN
+    FOR i IN 1..8 LOOP
+        EXECUTE IMMEDIATE 'CREATE USER u' || i || ' IDENTIFIED BY "U123456#a"';
+        EXECUTE IMMEDIATE 'GRANT CREATE SESSION TO u' || i;
+        EXECUTE IMMEDIATE 'GRANT SELECT ON BVDBA.THONGBAO TO u' || i;
+    END LOOP;
+END;
+/
 
 -- u1: Giam doc - doc toan bo thong bao (BGD max, moi khoa, moi co so)
 BEGIN
-    LBACSYS.SA_USER_ADMIN.SET_LEVELS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U1_GIAMDOC',
-        max_level   => 'BGD', min_level => 'NV');
-    LBACSYS.SA_USER_ADMIN.SET_COMPARTMENTS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U1_GIAMDOC',
-        read_comps  => 'TH,TK,TM', write_comps => NULL);
-    LBACSYS.SA_USER_ADMIN.SET_GROUPS(
-        policy_name  => 'BENHVIEN_POL',
-        user_name    => 'U1_GIAMDOC',
-        read_groups  => 'HCM,HP,HN', write_groups => NULL);
+    LBACSYS.SA_USER_ADMIN.SET_USER_LABELS(
+        policy_name => 'BENHVIEN_POL', user_name => 'u1',
+        max_read_label => 'BGD:TH,TK,TM:HCM,HP,HN'
+    );
 END;
 /
  
 -- u2: Lanh dao Khoa Tim mach tai Ho Chi Minh
 BEGIN
-    LBACSYS.SA_USER_ADMIN.SET_LEVELS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U2_LDKTIMMACH_HCM',
-        max_level   => 'LDK', min_level => 'NV');
-    LBACSYS.SA_USER_ADMIN.SET_COMPARTMENTS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U2_LDKTIMMACH_HCM',
-        read_comps  => 'TM', write_comps => NULL);
-    LBACSYS.SA_USER_ADMIN.SET_GROUPS(
-        policy_name  => 'BENHVIEN_POL',
-        user_name    => 'U2_LDKTIMMACH_HCM',
-        read_groups  => 'HCM', write_groups => NULL);
+    LBACSYS.SA_USER_ADMIN.SET_USER_LABELS(
+        policy_name => 'BENHVIEN_POL', user_name => 'u2',
+        max_read_label => 'LDK:TM:HCM'
+    );
 END;
 /
  
 -- u3: Lanh dao Khoa Than kinh tai Ha Noi
 BEGIN
-    LBACSYS.SA_USER_ADMIN.SET_LEVELS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U3_LDKTHANKINH_HN',
-        max_level   => 'LDK', min_level => 'NV');
-    LBACSYS.SA_USER_ADMIN.SET_COMPARTMENTS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U3_LDKTHANKINH_HN',
-        read_comps  => 'TK', write_comps => NULL);
-    LBACSYS.SA_USER_ADMIN.SET_GROUPS(
-        policy_name  => 'BENHVIEN_POL',
-        user_name    => 'U3_LDKTHANKINH_HN',
-        read_groups  => 'HN', write_groups => NULL);
+    LBACSYS.SA_USER_ADMIN.SET_USER_LABELS(
+        policy_name => 'BENHVIEN_POL', user_name => 'u3',
+        max_read_label => 'LDK:TK:HN'
+    );
 END;
 /
  
 -- u4: Nhan vien Khoa Than kinh tai Ho Chi Minh
 BEGIN
-    LBACSYS.SA_USER_ADMIN.SET_LEVELS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U4_NVTHANKINH_HCM',
-        max_level   => 'NV', min_level => 'NV');
-    LBACSYS.SA_USER_ADMIN.SET_COMPARTMENTS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U4_NVTHANKINH_HCM',
-        read_comps  => 'TK', write_comps => NULL);
-    LBACSYS.SA_USER_ADMIN.SET_GROUPS(
-        policy_name  => 'BENHVIEN_POL',
-        user_name    => 'U4_NVTHANKINH_HCM',
-        read_groups  => 'HCM', write_groups => NULL);
+    LBACSYS.SA_USER_ADMIN.SET_USER_LABELS(
+        policy_name => 'BENHVIEN_POL', user_name => 'u4',
+        max_read_label => 'NV:TK:HCM'
+    );
 END;
 /
  
 -- u5: Nhan vien Khoa Tim mach tai Ho Chi Minh
 BEGIN
-    LBACSYS.SA_USER_ADMIN.SET_LEVELS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U5_NVTIMMACH_HCM',
-        max_level   => 'NV', min_level => 'NV');
-    LBACSYS.SA_USER_ADMIN.SET_COMPARTMENTS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U5_NVTIMMACH_HCM',
-        read_comps  => 'TM', write_comps => NULL);
-    LBACSYS.SA_USER_ADMIN.SET_GROUPS(
-        policy_name  => 'BENHVIEN_POL',
-        user_name    => 'U5_NVTIMMACH_HCM',
-        read_groups  => 'HCM', write_groups => NULL);
+    LBACSYS.SA_USER_ADMIN.SET_USER_LABELS(
+        policy_name => 'BENHVIEN_POL', user_name => 'u5',
+        max_read_label => 'NV:TM:HCM'
+    );
 END;
 /
  
 -- u6: Lanh dao phong Khoa Tim mach tai Ho Chi Minh
 BEGIN
-    LBACSYS.SA_USER_ADMIN.SET_LEVELS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U6_LDPTIMMACH_HCM',
-        max_level   => 'LDK', min_level => 'NV');
-    LBACSYS.SA_USER_ADMIN.SET_COMPARTMENTS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U6_LDPTIMMACH_HCM',
-        read_comps  => 'TM', write_comps => NULL);
-    LBACSYS.SA_USER_ADMIN.SET_GROUPS(
-        policy_name  => 'BENHVIEN_POL',
-        user_name    => 'U6_LDPTIMMACH_HCM',
-        read_groups  => 'HCM', write_groups => NULL);
+    LBACSYS.SA_USER_ADMIN.SET_USER_LABELS(
+        policy_name => 'BENHVIEN_POL', user_name => 'u6',
+        max_read_label => 'LDK:TM:HCM'
+    );
 END;
 /
  
 -- u7: Lanh dao phong - doc toan bo thong bao cap LDK, moi khoa, moi co so
 BEGIN
-    LBACSYS.SA_USER_ADMIN.SET_LEVELS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U7_LDPTOBO',
-        max_level   => 'LDK', min_level => 'NV');
-    LBACSYS.SA_USER_ADMIN.SET_COMPARTMENTS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U7_LDPTOBO',
-        read_comps  => 'TH,TK,TM', write_comps => NULL);
-    LBACSYS.SA_USER_ADMIN.SET_GROUPS(
-        policy_name  => 'BENHVIEN_POL',
-        user_name    => 'U7_LDPTOBO',
-        read_groups  => 'HCM,HP,HN', write_groups => NULL);
+    LBACSYS.SA_USER_ADMIN.SET_USER_LABELS(
+        policy_name => 'BENHVIEN_POL', user_name => 'u7',
+        max_read_label => 'LDK:TH,TK,TM:HCM,HP,HN'
+    );
 END;
 /
  
 -- u8: Nhan vien Khoa Tieu hoa tai Ha Noi
 BEGIN
-    LBACSYS.SA_USER_ADMIN.SET_LEVELS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U8_NVTIEUHOA_HN',
-        max_level   => 'NV', min_level => 'NV');
-    LBACSYS.SA_USER_ADMIN.SET_COMPARTMENTS(
-        policy_name => 'BENHVIEN_POL',
-        user_name   => 'U8_NVTIEUHOA_HN',
-        read_comps  => 'TH', write_comps => NULL);
-    LBACSYS.SA_USER_ADMIN.SET_GROUPS(
-        policy_name  => 'BENHVIEN_POL',
-        user_name    => 'U8_NVTIEUHOA_HN',
-        read_groups  => 'HN', write_groups => NULL);
+    LBACSYS.SA_USER_ADMIN.SET_USER_LABELS(
+        policy_name => 'BENHVIEN_POL', user_name => 'u8',
+        max_read_label => 'NV:TH:HN'
+    );
 END;
 /
