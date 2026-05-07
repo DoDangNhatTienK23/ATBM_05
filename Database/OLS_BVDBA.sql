@@ -13,7 +13,7 @@
 -- ============================================================
 -- BUOC 5: GAN NHAN CHO DU LIEU THONGBAO
 -- ============================================================
- 
+
 -- TB001 -> t1: NV (moi nhan vien, moi khoa, moi co so)
 UPDATE THONGBAO SET OLS_LABEL = CHAR_TO_LABEL('BENHVIEN_POL', 'NV')
 WHERE MATHONGBAO = 'TB001';
@@ -48,10 +48,9 @@ PROMPT ===== Gan nhan THONGBAO hoan thanh =====
  
 -- Kiem tra nhan vua gan
 SELECT MATHONGBAO,
-       LABEL_TO_CHAR('BENHVIEN_POL', OLS_LABEL) AS NHAN_OLS,
-       SUBSTR(NOIDUNG, 1, 50) AS NOIDUNG_TOM_TAT
-FROM   THONGBAO
-ORDER  BY MATHONGBAO;
+       TO_CHAR(OLS_LABEL) AS NHAN_OLS,
+       SUBSTR(NOIDUNG,1,50)
+FROM THONGBAO;
  
  
 -- ============================================================
@@ -103,13 +102,13 @@ PROMPT ===== Tao user demo va cap quyen hoan thanh =====
  
 -- Kiem tra nhan nguoi dung
 SELECT USER_NAME,
-       READ_LABEL      AS NHAN_DOC,
-       WRITE_LABEL     AS NHAN_GHI,
-       READ_COMPARTMENTS  AS KHOA,
-       READ_GROUPS        AS CO_SO
-FROM   DBA_SA_USER_LABELS
-WHERE  POLICY_NAME = 'BENHVIEN_POL'
-AND    USER_NAME IN (
+       MAX_READ_LABEL  AS NHAN_DOC,
+       MAX_WRITE_LABEL AS NHAN_GHI,
+       DEFAULT_READ_LABEL,
+       DEFAULT_WRITE_LABEL
+FROM DBA_SA_USER_LABELS
+WHERE POLICY_NAME = 'BENHVIEN_POL'
+AND USER_NAME IN (
     'U1_GIAMDOC','U2_LDKTIMMACH_HCM','U3_LDKTHANKINH_HN',
     'U4_NVTHANKINH_HCM','U5_NVTIMMACH_HCM','U6_LDPTIMMACH_HCM',
     'U7_LDPTOBO','U8_NVTIEUHOA_HN'

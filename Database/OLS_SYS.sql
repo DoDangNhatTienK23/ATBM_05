@@ -4,7 +4,7 @@
 -- Thu tu: Chay sau hospital_setup.sql, truoc OLS_BVDBA.sql
 -- ============================================================
 -- Noi dung:
---   Buoc 1: Kich hoat OLS cho schema BVDBA
+--   Buoc 1: Cap quyen can thiet
 --   Buoc 2: Tao policy BENHVIEN_POL, gan vao bang THONGBAO
 --   Buoc 3: Tao Level, Compartment, Group
 --   Buoc 4: Tao nhan du lieu (t1~t7)
@@ -13,11 +13,15 @@
  
  
 -- ============================================================
--- BUOC 1: KICH HOAT OLS CHO SCHEMA BVDBA
+-- BUOC 1: CAP QUYEN CAN THIET
 -- ============================================================
  
-EXECUTE LBACSYS.SA_SYSDBA.ENABLE_SCHEMA(schema_name => 'BVDBA', option_list => '');
- 
+GRANT INHERIT PRIVILEGES ON USER SYS TO LBACSYS;
+
+GRANT EXECUTE ON LBACSYS.SA_LABEL_ADMIN TO BVDBA;
+GRANT EXECUTE ON LBACSYS.SA_USER_ADMIN TO BVDBA;
+GRANT EXECUTE ON LBACSYS.SA_COMPONENTS TO BVDBA;
+GRANT EXECUTE ON LBACSYS.SA_SYSDBA TO BVDBA;
  
 -- ============================================================
 -- BUOC 2: TAO CHINH SACH OLS
@@ -25,8 +29,12 @@ EXECUTE LBACSYS.SA_SYSDBA.ENABLE_SCHEMA(schema_name => 'BVDBA', option_list => '
  
 -- Xoa chinh sach cu neu ton tai
 BEGIN
-    LBACSYS.SA_SYSDBA.DROP_POLICY(policy_name => 'BENHVIEN_POL');
-EXCEPTION WHEN OTHERS THEN NULL;
+    LBACSYS.SA_SYSDBA.DROP_POLICY(
+        policy_name => 'BENHVIEN_POL',
+        drop_column => TRUE
+    );
+EXCEPTION 
+    WHEN OTHERS THEN NULL;
 END;
 /
  
@@ -39,15 +47,24 @@ BEGIN
     );
 END;
 /
- 
+
+-- Gan quyen cho BVDBA
+BEGIN
+    LBACSYS.SA_USER_ADMIN.SET_USER_PRIVS(
+        policy_name => 'BENHVIEN_POL',
+        user_name   => 'BVDBA',
+        privileges  => 'FULL'
+    );
+END;
+/
+
 -- Gan chinh sach vao bang THONGBAO cua BVDBA
 BEGIN
-    LBACSYS.SA_TABLE.SET_PROTECTION(
+    SA_POLICY_ADMIN.APPLY_TABLE_POLICY(
         policy_name   => 'BENHVIEN_POL',
         schema_name   => 'BVDBA',
         table_name    => 'THONGBAO',
-        table_options => 'READ_CONTROL,WRITE_CONTROL',
-        label_column  => 'OLS_LABEL'
+        table_options => 'READ_CONTROL,WRITE_CONTROL'
     );
 END;
 /
@@ -210,7 +227,8 @@ END;
 --   user.compartments INTERSECT data.compartments (neu du lieu co compartment)
 --   user.groups INTERSECT data.groups (neu du lieu co group)
 -- ============================================================
- 
+
+
 -- u1: Giam doc - doc toan bo thong bao (BGD max, moi khoa, moi co so)
 BEGIN
     LBACSYS.SA_USER_ADMIN.SET_LEVELS(
