@@ -8,9 +8,9 @@ Source hiện tại đã có cơ chế mapping bệnh nhân bằng cột `BENHNH
 
 ## File được thêm
 
-- `scripts/generate_100k_patient_users.sql`: sinh bệnh nhân mẫu, tạo Oracle users, cấp role bệnh nhân.
-- `scripts/check_100k_patient_users.sql`: kiểm tra số lượng user, số dòng bệnh nhân, role, mapping.
-- `scripts/cleanup_100k_patient_users.sql`: drop user mẫu và xóa bệnh nhân mẫu an toàn.
+- `Database/generate_100k_patient_users.sql`: sinh bệnh nhân mẫu, tạo Oracle users, cấp role bệnh nhân.
+- `Database/check_100k_patient_users.sql`: kiểm tra số lượng user, số dòng bệnh nhân, role, mapping.
+- `Database/cleanup_100k_patient_users.sql`: drop user mẫu và xóa bệnh nhân mẫu an toàn.
 
 ## Cảnh báo trước khi chạy
 
