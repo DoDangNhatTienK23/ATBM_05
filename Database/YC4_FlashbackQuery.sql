@@ -117,24 +117,3 @@ SELECT TO_CHAR(SYSDATE - (VALUE/86400), 'YYYY-MM-DD HH24:MI:SS') AS CO_THE_FLASH
 FROM V$PARAMETER
 WHERE NAME = 'undo_retention';
  
- 
--- ------------------------------------------------------------
--- Mo rong: Flashback Versions Query
--- Xem tat ca phien ban thay doi cua 1 dong theo thoi gian
--- Huu ich khi can truy vet lich su sua doi day du
--- ------------------------------------------------------------
--- L?y SCN hien tai va SCN cu nhat con trong undo
-SELECT CURRENT_SCN FROM V$DATABASE;
-
--- B??c 2: Dung VERSIONS BETWEEN SCN
-SELECT VERSIONS_STARTTIME,
-       VERSIONS_ENDTIME,
-       VERSIONS_OPERATION AS HANH_VI,
-       VERSIONS_XID       AS TRANSACTION_ID,
-       CHANDOAN,
-       KETLUAN,
-       MABS
-FROM BVDBA.HSBA
-VERSIONS BETWEEN SCN MINVALUE AND MAXVALUE
-WHERE MAHSBA = 'HSBA001'
-ORDER BY VERSIONS_STARTTIME DESC;
