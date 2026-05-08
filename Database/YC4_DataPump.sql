@@ -12,6 +12,7 @@ ALTER SESSION SET CONTAINER = XEPDB1;
  
 -- Buoc 1: Tao directory object tro den thu muc that tren he thong
 -- (Tao thu muc C:\BV_Backup truoc khi chay, hoac doi thanh duong dan nao do tuy nhu cau su dung)
+-- Luu y: Do cac service cua Oracle chi cai tren o C nen backup chi duoc setup tren o C
 DECLARE
 BEGIN
     EXECUTE IMMEDIATE
@@ -55,12 +56,12 @@ SELECT 'DONTHUOC',  COUNT(*) FROM DONTHUOC;
 
 -- ------------------------------------------------------------
 -- LENH CHAY TREN TERMINAL (ngoai SQL*Plus):
+-- Chay voi quyen Admin hoac mo Powershell
 -- Thuc hien export toan bo schema BVDBA ra file .dmp
 -- Chay voi quyen SYS hoac BVDBA co quyen EXP_FULL_DATABASE
 -- ------------------------------------------------------------
 -- Cu phap mau:
--- expdp "bvdba/BvDba#2026@localhost:1521/XEPDB1" schemas=BVDBA directory=BVDBA_BACKUP_DIR dumpfile=bvdba_backup_%DATE%.dmp logfile=bvdba_export_%DATE%.log
--- Thay %DATE% bang ngay thang luu file
+-- expdp "bvdba/BvDba#2026@localhost:1521/XEPDB1" schemas=BVDBA directory=BVDBA_BACKUP_DIR dumpfile=bvdba_backup.dmp logfile=bvdba_export.log
 
 -- ------------------------------------------------------------
 -- MO PHONG SU CO: Sau khi backup, gia su co hanh vi xau
@@ -87,7 +88,7 @@ SELECT COUNT(*) AS SO_DONG_HSBA_DV  FROM HSBA_DV  WHERE MAHSBA = 'HSBA001';
 -- TABLE_EXISTS_ACTION=REPLACE: xoa bang cu, tao lai tu file backup
 -- ------------------------------------------------------------
 -- Cu phap mau:
--- impdp "bvdba/BvDba#2026@localhost:1521/XEPDB1" schemas=BVDBA directory=BVDBA_BACKUP_DIR dumpfile=bvdba_backup_%DATE%.dmp logfile=bvdba_export_%DATE%.log table_exists_action=REPLACE
+-- impdp "bvdba/BvDba#2026@localhost:1521/XEPDB1" schemas=BVDBA directory=BVDBA_BACKUP_DIR dumpfile=bvdba_backup.dmp logfile=bvdba_export.log table_exists_action=REPLACE
  
 -- Sau khi import, kiem tra lai so lieu
 SELECT 'BENHNHAN' AS BANG, COUNT(*) AS SO_DONG FROM BENHNHAN

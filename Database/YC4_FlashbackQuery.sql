@@ -2,6 +2,7 @@
 -- YEU CAU 4: SAO LUU VA PHUC HOI DU LIEU
 -- PHUONG PHAP 2: FLASHBACK QUERY
 -- Phuc hoi du lieu dua vao nhat ky kiem toan (SCN / Timestamp)
+-- De chay duoc doan nay, hay chay file TEST.sql de thu kich ban audit
 -- Chay bang: BVDBA (co DBA role)
 -- ============================================================
  
