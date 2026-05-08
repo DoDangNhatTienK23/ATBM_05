@@ -5,8 +5,7 @@
 -- ============================================================
 -- Noi dung:
 --   Buoc 5: Gan nhan OLS cho du lieu THONGBAO (TB001~TB007)
---   Buoc 7: Tao user demo (u1~u8) va cap quyen SELECT
---   Buoc 8: Cau lenh kiem tra ket qua
+--   Buoc 6: Cau lenh kiem tra ket qua
 -- ============================================================
  
  
@@ -54,50 +53,7 @@ FROM THONGBAO;
  
  
 -- ============================================================
--- BUOC 7: TAO USER DEMO (u1~u8) VA CAP QUYEN
--- ============================================================
- 
-DECLARE
-    PROCEDURE create_demo_user(p_user VARCHAR2) IS
-    BEGIN
-        EXECUTE IMMEDIATE
-            'CREATE USER ' || p_user ||
-            ' IDENTIFIED BY Welcome#123' ||
-            ' DEFAULT TABLESPACE USERS QUOTA 0M ON USERS';
-        DBMS_OUTPUT.PUT_LINE('Da tao user: ' || p_user);
-    EXCEPTION
-        WHEN OTHERS THEN
-            DBMS_OUTPUT.PUT_LINE('User da ton tai hoac loi: ' || p_user || ' - ' || SQLERRM);
-    END;
-BEGIN
-    create_demo_user('U1_GIAMDOC');
-    create_demo_user('U2_LDKTIMMACH_HCM');
-    create_demo_user('U3_LDKTHANKINH_HN');
-    create_demo_user('U4_NVTHANKINH_HCM');
-    create_demo_user('U5_NVTIMMACH_HCM');
-    create_demo_user('U6_LDPTIMMACH_HCM');
-    create_demo_user('U7_LDPTOBO');
-    create_demo_user('U8_NVTIEUHOA_HN');
-END;
-/
- 
--- Cap quyen dang nhap
-GRANT CREATE SESSION TO
-    U1_GIAMDOC, U2_LDKTIMMACH_HCM, U3_LDKTHANKINH_HN,
-    U4_NVTHANKINH_HCM, U5_NVTIMMACH_HCM, U6_LDPTIMMACH_HCM,
-    U7_LDPTOBO, U8_NVTIEUHOA_HN;
- 
--- Cap quyen xem THONGBAO
-GRANT SELECT ON THONGBAO TO
-    U1_GIAMDOC, U2_LDKTIMMACH_HCM, U3_LDKTHANKINH_HN,
-    U4_NVTHANKINH_HCM, U5_NVTIMMACH_HCM, U6_LDPTIMMACH_HCM,
-    U7_LDPTOBO, U8_NVTIEUHOA_HN;
- 
-PROMPT ===== Tao user demo va cap quyen hoan thanh =====
- 
- 
--- ============================================================
--- BUOC 8: KIEM TRA KET QUA
+-- BUOC 6: KIEM TRA KET QUA
 -- ============================================================
  
 -- Kiem tra nhan nguoi dung
@@ -109,8 +65,6 @@ SELECT USER_NAME,
 FROM DBA_SA_USER_LABELS
 WHERE POLICY_NAME = 'BENHVIEN_POL'
 AND USER_NAME IN (
-    'U1_GIAMDOC','U2_LDKTIMMACH_HCM','U3_LDKTHANKINH_HN',
-    'U4_NVTHANKINH_HCM','U5_NVTIMMACH_HCM','U6_LDPTIMMACH_HCM',
-    'U7_LDPTOBO','U8_NVTIEUHOA_HN'
+    'U1', 'U2', 'U3', 'U4', 'U5', 'U6', 'U7', 'U8'
 )
 ORDER BY USER_NAME;
