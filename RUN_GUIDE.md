@@ -813,14 +813,14 @@ Expected visibility theo script:
 
 | User | Dự kiến thấy |
 |---|---|
-| `U1_GIAMDOC` | `TB001` đến `TB007` |
-| `U2_LDKTIMMACH_HCM` | `TB001`, `TB003` |
-| `U3_LDKTHANKINH_HN` | `TB001`, `TB003` |
-| `U4_NVTHANKINH_HCM` | `TB001` |
-| `U5_NVTIMMACH_HCM` | `TB001` |
-| `U6_LDPTIMMACH_HCM` | `TB001`, `TB003` |
-| `U7_LDPTOBO` | `TB001`, `TB003`, `TB004`, `TB005`, `TB006`, `TB007` |
-| `U8_NVTIEUHOA_HN` | `TB001`, `TB006` |
+| `U1` | `TB001` đến `TB007` |
+| `U2` | `TB001`, `TB003` |
+| `U3` | `TB001`, `TB003` |
+| `U4` | `TB001` |
+| `U5` | `TB001` |
+| `U6` | `TB001`, `TB003` |
+| `U7` | `TB001`, `TB003`, `TB004`, `TB005`, `TB006`, `TB007` |
+| `U8` | `TB001`, `TB006` |
 
 SQL test bằng từng user OLS:
 

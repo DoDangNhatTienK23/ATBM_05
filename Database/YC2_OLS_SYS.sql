@@ -228,6 +228,18 @@ END;
 --   user.groups INTERSECT data.groups (neu du lieu co group)
 -- ============================================================
 
+-- Xoa user neu da ton tai
+BEGIN
+    FOR i IN 1..8 LOOP
+        BEGIN
+            EXECUTE IMMEDIATE 'DROP USER u' || i || ' CASCADE';
+        EXCEPTION
+            WHEN OTHERS THEN NULL; -- Bo qua neu user chua ton tai
+        END;
+    END LOOP;
+END;
+/
+
 -- Tao user
 BEGIN
     FOR i IN 1..8 LOOP
